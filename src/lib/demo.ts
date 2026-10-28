@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { execFileSync } from "child_process";
 import type { ProjectSummary, Job, Task } from "./types";
-import type { Assessment } from "./assessment";
+import type { Assessment, ComponentInfo } from "./assessment";
 import { assessmentPath, readAssessment } from "./assessment";
 import { PROJECTS_ROOT } from "./config";
 import { resolveGit } from "./templates";
@@ -43,6 +43,12 @@ interface DemoProject {
   history: { prompt: string; status: Job["status"]; state: Job["worktreeState"]; agoMs: number }[];
   suggestions: { kind: "do" | "ask"; text: string }[];
   site: string; // a working static web page for the live preview
+  /** The parts of the page, as an assessment of its code would describe them (true to `site`). */
+  parts: ComponentInfo[];
+  /** How the parts connect, as a Mermaid flowchart whose labels are the parts' names. */
+  flow: string;
+  architecture: string;
+  risks: string[];
 }
 
 // --- The made-up projects -------------------------------------------------
@@ -161,6 +167,55 @@ const DEMO: DemoProject[] = [
       { kind: "ask", text: "What information does this form currently collect?" },
     ],
     site: INTAKE_SITE,
+    parts: [
+      {
+        name: "Intake form",
+        path: "index.html (form on the page)",
+        what: "The form you fill in: client, matter type, responsible lawyer, estimated value and notes.",
+        does: "Collects the details of a new matter.",
+        status: "solid",
+        statusWhy: "All five fields are on the page, and each one is read when you press Create matter summary.",
+        issues: [],
+      },
+      {
+        name: "Summary builder",
+        path: "index.html (build function)",
+        what: "The step that turns the form into a matter summary.",
+        does: "Reads every field and lays them out as a summary with a reference number.",
+        status: "solid",
+        statusWhy: "Its code uses all five fields and writes the finished summary onto the page.",
+        issues: [
+          "The reference number comes from the length of the client's name, so two clients with names of the same length get the same reference.",
+          "\"Opened: today\" is fixed text, not the actual date.",
+        ],
+      },
+      {
+        name: "Summary card",
+        path: "index.html (summary view)",
+        what: "The box under the form showing the finished summary.",
+        does: "Shows the summary laid out ready to copy into your files.",
+        status: "solid",
+        statusWhy: "The summary appears in the box as soon as it is built, including when the page first opens.",
+        issues: [],
+      },
+      {
+        name: "Saved matters",
+        path: "index.html (storage)",
+        what: "Where past matters would be kept, so you could look them up later.",
+        does: "Nothing yet.",
+        status: "stub",
+        statusWhy: "The page keeps no record: once it is closed, the summary is gone.",
+        issues: ["Past matters aren't saved anywhere yet (it's on the to-do list)."],
+      },
+    ],
+    flow: [
+      "graph TD",
+      '  F["Intake form"] -->|field values| B["Summary builder"]',
+      '  B -->|summary text| C["Summary card"]',
+      '  B -->|matters to keep| S["Saved matters"]',
+    ].join("\n"),
+    architecture: "One web page: the form feeds a small function that writes the summary into a box below it.",
+    risks: ["Reference numbers can repeat, so they shouldn't be relied on to tell matters apart."],
   },
   {
     id: "demo-clause-library",
@@ -169,10 +224,11 @@ const DEMO: DemoProject[] = [
     done: [
       "Search clauses by keyword",
       "Copy a clause with one click",
-      "Show a 'copied!' tick after copying",
       "Ship a starter set of common clauses",
     ],
     whatsLeft: [
+      "Make Copy copy the right clause after a search",
+      "Show a 'copied!' tick after copying",
       "Let you add your own clauses and save them",
       "Group clauses by category with headings",
       "Search by category as well as by words",
@@ -186,14 +242,64 @@ const DEMO: DemoProject[] = [
     history: [
       { prompt: "Add a 'force majeure' clause to the library", status: "done", state: "applied", agoMs: 4 * HOUR },
       { prompt: "Let me search by category as well as words", status: "running", state: "active", agoMs: 2 * MIN },
-      { prompt: "Make the copy button show a 'copied!' tick", status: "done", state: "applied", agoMs: 1 * DAY },
+      { prompt: "Make the copy button show a 'copied!' tick", status: "done", state: "discarded", agoMs: 1 * DAY },
     ],
     suggestions: [
+      { kind: "do", text: "Make Copy copy the right clause after I've searched" },
       { kind: "do", text: "Let me add my own clauses and save them" },
-      { kind: "do", text: "Group the clauses by category with headings" },
       { kind: "ask", text: "Which clauses are in the library right now?" },
     ],
     site: CLAUSE_SITE,
+    parts: [
+      {
+        name: "Search box",
+        path: "index.html (search on the page)",
+        what: "The box at the top where you type words to look for.",
+        does: "Narrows the list to clauses whose title, tag or wording contains what you typed.",
+        status: "solid",
+        statusWhy: "Each letter you type redraws the list with only the matching clauses, and it says so when none match.",
+        issues: [],
+      },
+      {
+        name: "Clause list",
+        path: "index.html (clause list view)",
+        what: "The clauses shown on the page, each with its tag and a Copy button.",
+        does: "Shows every clause that matches the search.",
+        status: "solid",
+        statusWhy: "It draws each matching clause with its title, tag and full wording.",
+        issues: [],
+      },
+      {
+        name: "Copy button",
+        path: "index.html (copy function)",
+        what: "The Copy button on each clause.",
+        does: "Puts a clause's wording on your clipboard, ready to paste.",
+        status: "broken",
+        statusWhy:
+          "After a search it copies the wrong clause: it counts the clause's place in the search results but looks it up in the full list.",
+        issues: [
+          "With no search typed, it copies the right clause; after searching, it can copy a different one.",
+          "There's no sign it worked: no 'copied!' tick, and if the browser blocks the clipboard it silently does nothing.",
+        ],
+      },
+      {
+        name: "Starter clauses",
+        path: "index.html (clause store)",
+        what: "Five common clauses written into the page: confidentiality, governing law, limitation of liability, termination and force majeure.",
+        does: "Supplies the clauses the list shows.",
+        status: "partial",
+        statusWhy: "The five clauses load and can be searched, but they're written into the page, so you can't add or save your own.",
+        issues: ["Adding your own clauses needs somewhere to keep them, which doesn't exist yet."],
+      },
+    ],
+    flow: [
+      "graph TD",
+      '  Q["Search box"] -->|search words| L["Clause list"]',
+      '  D["Starter clauses"] -->|clauses| L',
+      '  L -->|chosen clause| C["Copy button"]',
+    ].join("\n"),
+    architecture: "One web page: a list of clauses kept in the page, filtered by the search box, each with a Copy button.",
+    risks: ["Copying the wrong clause into a contract without noticing; check what you paste until Copy is fixed."],
   },
   {
     id: "demo-deadline-tracker",
@@ -206,6 +312,7 @@ const DEMO: DemoProject[] = [
       "Add a progress bar to each row",
     ],
     whatsLeft: [
+      "Count down from real dates instead of fixed numbers",
       "Let you add and edit your own matters and dates",
       "Sort so the most urgent matter is always on top",
       "Show a reminder as a deadline gets close",
@@ -221,11 +328,49 @@ const DEMO: DemoProject[] = [
       { prompt: "Add a progress bar to each row", status: "done", state: "applied", agoMs: 5 * DAY },
     ],
     suggestions: [
-      { kind: "do", text: "Let me add and edit my own matters and dates" },
+      { kind: "do", text: "Make it count down from real due dates" },
       { kind: "do", text: "Sort so the most urgent matter is always on top" },
       { kind: "ask", text: "How does it decide what counts as urgent?" },
     ],
     site: DEADLINE_SITE,
+    parts: [
+      {
+        name: "Deadline board",
+        path: "index.html (table on the page)",
+        what: "The table of matters, each with its filing, days left and a bar.",
+        does: "Shows every deadline at a glance.",
+        status: "solid",
+        statusWhy: "It draws one row per matter with its days left, its colour and a bar that fills as the deadline nears.",
+        issues: ["Every row says \"court filing\": the filing type isn't stored per matter."],
+      },
+      {
+        name: "Urgency colours",
+        path: "index.html (colour rules)",
+        what: "The rule that colours each matter.",
+        does: "Red once a deadline has passed, amber at five days or fewer, green otherwise.",
+        status: "solid",
+        statusWhy: "The rule is written out in the code and applied to every row.",
+        issues: [],
+      },
+      {
+        name: "Matter list",
+        path: "index.html (matters kept in the page)",
+        what: "The four matters the board shows, written into the page itself.",
+        does: "Supplies each matter's name and days left.",
+        status: "partial",
+        statusWhy:
+          "The days left are typed in as fixed numbers rather than worked out from due dates, so they never count down.",
+        issues: ["You can't add or edit matters without changing the page itself."],
+      },
+    ],
+    flow: [
+      "graph TD",
+      '  M["Matter list"] -->|days left| U["Urgency colours"]',
+      '  M -->|matters| B["Deadline board"]',
+      '  U -->|colour for each row| B',
+    ].join("\n"),
+    architecture: "One web page: a fixed list of matters, coloured by urgency, drawn as a table.",
+    risks: ["The days left don't change by themselves, so the board goes out of date unless the page is edited."],
   },
 ];
 
@@ -255,10 +400,13 @@ function demoAssessment(d: DemoProject): Assessment {
     phase: d.phase,
     completeness: completenessOf(d),
     stack: d.stack,
-    components: [],
-    architecture: { mermaid: "", description: "" },
-    inferredPlan: [],
-    risks: [],
+    components: d.parts,
+    architecture: { mermaid: d.flow, description: d.architecture },
+    inferredPlan: [
+      { phase: "Built so far", items: d.done.map((title) => ({ title, done: true })) },
+      { phase: "Still to do", items: d.whatsLeft.map((title) => ({ title, done: false })) },
+    ],
+    risks: d.risks,
     planDrift: { hasPlan: false, aligned: true, notes: "" },
   };
 }
@@ -275,12 +423,15 @@ function seedFiles(d: DemoProject, dir: string) {
   fs.mkdirSync(path.join(dir, META_DIR), { recursive: true });
   fs.writeFileSync(plainSummaryPath(dir), d.plainSummary + "\n", "utf8");
   fs.writeFileSync(assessmentPath(dir), JSON.stringify(demoAssessment(d), null, 2), "utf8");
+  writeTasks(dir, demoTasks(d));
+}
+
+function demoTasks(d: DemoProject): Task[] {
   const now = Date.now();
-  const tasks: Task[] = [
+  return [
     ...d.done.map((t, i) => ({ id: `done-${i}`, title: t, status: "done" as const, createdAt: now, updatedAt: now })),
     ...d.whatsLeft.map((t, i) => ({ id: `todo-${i}`, title: t, status: "todo" as const, createdAt: now, updatedAt: now })),
   ];
-  writeTasks(dir, tasks);
 }
 
 /** Create the demo project on disk (idempotent — keeps any edits already made). */
@@ -288,12 +439,17 @@ export function materializeDemo(id: string): string {
   const d = byId(id);
   if (!d) throw new Error(`Unknown demo project: ${id}`);
   const dir = demoPathFor(id);
-  if (fs.existsSync(path.join(dir, "index.html"))) return dir;
+  if (fs.existsSync(path.join(dir, "index.html"))) {
+    refreshDemoNotes(d, dir);
+    return dir;
+  }
   seedFiles(d, dir);
   const git = resolveGit();
   if (git) {
     try {
       execFileSync(git, ["init"], { cwd: dir, stdio: "ignore" });
+      // Protégé's notes aren't part of the demo project, as in any other project.
+      excludeNotesSync(git, dir);
       execFileSync(git, ["add", "-A"], { cwd: dir, stdio: "ignore" });
       execFileSync(
         git,
@@ -375,4 +531,43 @@ export function demoDetail(id: string) {
 export function demoSuggestions(id: string) {
   const d = byId(id);
   return d ? d.suggestions : [];
+}
+
+function excludeNotesSync(git: string, dir: string) {
+  const file = path.join(dir, ".git", "info", "exclude");
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  const have = fs.existsSync(file) ? fs.readFileSync(file, "utf8") : "";
+  if (!have.split(/\r?\n/).includes(`/${META_DIR}/`)) {
+    fs.appendFileSync(file, `${have && !have.endsWith("\n") ? "\n" : ""}/${META_DIR}/\n`);
+  }
+  void git;
+}
+
+/**
+ * Bring an existing demo folder's notes up to date: the assessment (parts, diagram, reasons)
+ * and checklist are rewritten when the assessment lacks parts, and notes that git tracked in older demos stop being tracked.
+ */
+function refreshDemoNotes(d: DemoProject, dir: string) {
+  try {
+    const current = readAssessment(dir);
+    if (!current?.components?.length) {
+      fs.mkdirSync(path.join(dir, META_DIR), { recursive: true });
+      fs.writeFileSync(assessmentPath(dir), JSON.stringify(demoAssessment(d), null, 2), "utf8");
+      // The checklist from the same, older version of the demo goes with it.
+      writeTasks(dir, demoTasks(d));
+    }
+    const git = resolveGit();
+    if (!git) return;
+    const tracked = execFileSync(git, ["ls-files", "--", META_DIR], { cwd: dir }).toString().trim();
+    if (tracked) {
+      execFileSync(git, ["rm", "-r", "-q", "--cached", "--", META_DIR], { cwd: dir, stdio: "ignore" });
+      excludeNotesSync(git, dir);
+      execFileSync(git, ["-c", "user.name=Protégé", "-c", "user.email=protege@localhost", "commit", "-q", "-m", "Keep Protégé's notes out of the project"], {
+        cwd: dir,
+        stdio: "ignore",
+      });
+    }
+  } catch {
+    /* a demo still works without its notes */
+  }
 }
