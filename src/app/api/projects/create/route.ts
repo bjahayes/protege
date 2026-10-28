@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createProjectFromTemplate, getTemplate } from "@/lib/templates";
 import { projectIdFromPath } from "@/lib/config";
-import { getJobManager } from "@/lib/job-manager";
+import { launchShaping, writeStarter } from "@/lib/starter";
+import { excludeNotes } from "@/lib/git";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,6 +22,9 @@ export async function POST(req: NextRequest) {
   if (!name) {
     return NextResponse.json({ error: "Please give your project a name." }, { status: 400 });
   }
+  if (tpl.needsDescription && !description) {
+    return NextResponse.json({ error: "Please say what you'd like it to do, so Protégé knows what to build." }, { status: 400 });
+  }
 
   let created;
   try {
@@ -32,26 +36,19 @@ export async function POST(req: NextRequest) {
   const projectId = projectIdFromPath(created.path);
 
   // If they described what they want, put an agent on it right away.
-  let jobId: string | undefined;
-  if (description) {
-    const prompt =
-      `This is a brand-new project started from the "${tpl.name}" template ` +
-      `(${tpl.blurb}). The starter files already work. ` +
-      `Tailor the project to what the user wants, keeping it a simple, self-contained web page ` +
-      `(HTML/CSS/JS, no build step) unless they clearly need more.\n\n` +
-      `What the user wants:\n${description}`;
-    const job = getJobManager().launch({
-      projectPath: created.path,
-      projectName: created.name,
-      prompt,
-      kind: "run",
-      permissionMode: "acceptEdits",
-      isolate: false, // brand-new empty repo — build directly; history still allows undo
-      primeContext: false, // nothing to prime yet
-      autoVerify: false,
-    });
-    jobId = job.id;
-  }
+  const jobId = description ? launchShaping(created.path, created.name, tpl, description) : undefined;
+
+  // The getting-started record the project page shows its steps from. Protégé's notes stay
+  // out of the project's git history, as in any project.
+  await excludeNotes(created.path);
+  writeStarter(created.path, {
+    template: tpl.id,
+    templateName: tpl.name,
+    name: created.name,
+    createdAt: Date.now(),
+    description: description || undefined,
+    buildJobId: jobId,
+  });
 
   return NextResponse.json({
     ok: true,

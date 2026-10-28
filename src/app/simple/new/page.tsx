@@ -1,10 +1,10 @@
 "use client";
 
 import { apiFetch } from "@/lib/api-client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import SimpleRun from "@/components/SimpleRun";
+import { StepTrack } from "@/components/simple/GettingStarted";
 
 interface TemplateMeta {
   id: string;
@@ -12,6 +12,8 @@ interface TemplateMeta {
   emoji: string;
   blurb: string;
   whatYouGet: string;
+  describeHint: string;
+  needsDescription: boolean;
 }
 
 export default function SimpleNew() {
@@ -22,7 +24,8 @@ export default function SimpleNew() {
   const [description, setDescription] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [created, setCreated] = useState<{ projectId: string; jobId?: string } | null>(null);
+  // Step 2's box, brought into view when a starting point is picked.
+  const describeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     apiFetch("/api/templates", { cache: "no-store" })
@@ -31,8 +34,9 @@ export default function SimpleNew() {
       .catch(() => setTemplates([]));
   }, []);
 
+  const needsDescription = !!picked?.needsDescription;
   const create = async () => {
-    if (!picked || !name.trim()) return;
+    if (!picked || !name.trim() || (needsDescription && !description.trim())) return;
     setBusy(true);
     setError(null);
     try {
@@ -47,34 +51,15 @@ export default function SimpleNew() {
         setBusy(false);
         return;
       }
-      setCreated({ projectId: j.projectId, jobId: j.jobId });
-      // Nothing to build (no description) — go straight to the project.
-      if (!j.jobId) router.push(`/simple/project/${j.projectId}`);
+      // The project page carries on with the steps, showing the shaping run live if there is one.
+      router.push(`/simple/project/${j.projectId}${j.jobId ? `?job=${j.jobId}` : ""}`);
+      return;
     } catch {
       setError("Couldn't create the project.");
     } finally {
       setBusy(false);
     }
   };
-
-  // --- Building step (an agent is tailoring the fresh project) ---
-  if (created?.jobId) {
-    return (
-      <div className="p-8 max-w-2xl mx-auto">
-        <h1 className="text-2xl font-bold">Building “{name}”</h1>
-        <p className="text-muted mt-1">Setting it up from your description. This usually takes a minute or two.</p>
-        <div className="mt-5">
-          <SimpleRun jobId={created.jobId} />
-        </div>
-        <Link
-          href={`/simple/project/${created.projectId}`}
-          className="inline-block mt-5 px-4 py-2.5 rounded-xl bg-accent/20 border border-accent/40 text-accent hover:bg-accent/30 text-sm font-semibold"
-        >
-          Open the project →
-        </Link>
-      </div>
-    );
-  }
 
   return (
     <div className="p-8 max-w-3xl mx-auto">
@@ -83,7 +68,15 @@ export default function SimpleNew() {
       </Link>
       <h1 className="text-2xl font-bold mt-2">Start something new</h1>
       <p className="text-muted mt-1">
-        Pick a starting point. You&apos;ll get something that already works, then shape it into what you want.
+        You&apos;ll start from something that already works, then shape it into what you want. These are the steps:
+      </p>
+      <div className="mt-3">
+        <StepTrack upTo={picked ? "describe" : "choose"} />
+      </div>
+      <p className="text-[12.5px] text-muted mt-2">
+        {picked
+          ? "Now give it a name and say what it's for. Protégé shapes it from that, then you try it and ask for changes."
+          : "First, pick the starting point closest to what you want."}
       </p>
 
       {/* Step 1 — pick a template */}
@@ -95,7 +88,9 @@ export default function SimpleNew() {
               key={t.id}
               onClick={() => {
                 setPicked(t);
-                if (!name.trim() && t.id !== "blank") setName(t.name);
+                // Suggest the starting point's name until they type their own.
+                if (!name.trim() || templates.some((o) => o.name === name)) setName(t.id === "blank" ? "" : t.name);
+                setTimeout(() => describeRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 0);
               }}
               className={`text-left rounded-2xl border p-5 transition-colors ${
                 active ? "border-accent bg-accent/10" : "border-border bg-panel hover:border-accent/50"
@@ -114,7 +109,7 @@ export default function SimpleNew() {
 
       {/* Step 2 — name + describe */}
       {picked && (
-        <div className="mt-6 rounded-2xl border border-accent/30 bg-accent/5 p-5">
+        <div ref={describeRef} className="mt-6 rounded-2xl border border-accent/30 bg-accent/5 p-5">
           <label className="block text-sm font-medium mb-1">What do you want to call it?</label>
           <input
             value={name}
@@ -124,17 +119,18 @@ export default function SimpleNew() {
           />
 
           <label className="block text-sm font-medium mt-4 mb-1">
-            What should it do? <span className="text-muted font-normal">(optional — you can also skip and build it later)</span>
+            What should it do?{" "}
+            <span className="text-muted font-normal">
+              {needsDescription
+                ? "(Protégé builds it from this)"
+                : "(optional: leave it empty to try the starter as it is, and change it after)"}
+            </span>
           </label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={3}
-            placeholder={
-              picked.id === "blank"
-                ? "Describe what you'd like to build, in plain words."
-                : "e.g. 'Change it to track document deadlines with a due date on each item.'"
-            }
+            placeholder={picked.describeHint}
             className="w-full px-3 py-2.5 rounded-xl bg-bg border border-border text-sm focus:outline-none focus:border-accent/60 resize-y"
           />
 
@@ -146,10 +142,10 @@ export default function SimpleNew() {
             </p>
             <button
               onClick={create}
-              disabled={busy || !name.trim()}
+              disabled={busy || !name.trim() || (needsDescription && !description.trim())}
               className="px-5 py-2.5 rounded-xl bg-accent/20 border border-accent/40 text-accent hover:bg-accent/30 text-sm font-semibold disabled:opacity-40"
             >
-              {busy ? "Creating…" : description.trim() ? "Create & build" : "Create it"}
+              {busy ? "Creating…" : description.trim() ? "Create it and shape it →" : "Create it →"}
             </button>
           </div>
         </div>

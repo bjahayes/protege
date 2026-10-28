@@ -43,6 +43,9 @@ via the Claude Agent SDK.
     Strips ANTHROPIC_API_KEY/ANTHROPIC_AUTH_TOKEN and stops a run whose init `apiKeySource` isn't `none`/`oauth`
     unless `PROTEGE_ALLOW_API_KEY=1`. `PROTEGE_CLAUDE_PATH` overrides where `claude` is found.
   - `live-build.ts` — client-safe: stages, plain step labels, touched files, parts-map layout and edges.
+  - `starter.ts` / `starter-steps.ts` — projects made in Start something new keep `.protege/starter.json`
+    (template, description, the shaping run, when first tried). `starterProgress()` (client-safe) works out the
+    five getting-started steps from it and the project's jobs; `GettingStarted.tsx` shows them on the project page.
 - `src/components/simple/**` — Protégé's live views: `SimpleTask` (conversation + track + review + reply),
   `Conversation`, `BuildTrack`, `PartsMap`, `LiveStrip`, `PartsBar`.
 - `src/app/api/**` — route handlers (all `runtime = "nodejs"`, `dynamic = "force-dynamic"`).

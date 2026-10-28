@@ -5,8 +5,9 @@
 // files are being changed by a running task glow, and so do the arrows that touch them.
 // Each part carries its label (Working, Partly built…) and the evidence for that label.
 
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
-import type { Assessment } from "@/lib/assessment";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import type { Assessment, ComponentInfo } from "@/lib/assessment";
 import { LAYERS, layerOf, edgesFromMermaid, PART_STATUS, partReason } from "@/lib/live-build";
 import { routeWires, checkWires, gapFor, type Wire } from "@/lib/wire-route";
 
@@ -163,6 +164,7 @@ export default function PartsMap({ assessment, changing }: { assessment: Assessm
                         if (el) nodes.current.set(c.name, el);
                         else nodes.current.delete(c.name);
                       }}
+                      data-part-card
                       onClick={() => setSel((s) => (s === c.name ? null : c.name))}
                       aria-pressed={sel === c.name}
                       className={`flex-1 basis-[150px] max-w-[230px] min-w-0 text-left rounded-xl border-[1.5px] px-3 py-2.5 flex flex-col gap-1 transition-colors hover:border-accent/50 ${
@@ -217,53 +219,152 @@ export default function PartsMap({ assessment, changing }: { assessment: Assessm
         </div>
       </dl>
 
-      {selected && (
-        <div className="mt-4 rounded-xl border border-border bg-panel-2 px-4 py-3.5" aria-live="polite">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-semibold">{selected.name}</span>
-            {(() => {
-              const st = PART_STATUS[selected.status] || PART_STATUS.unknown;
-              const ch = isChanging(selected.name);
-              return (
-                <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${ch ? "text-accent border-accent/50 bg-accent/10" : TONE_PILL[st.tone]}`}>
-                  {ch ? "Being changed now" : st.label}
-                </span>
-              );
-            })()}
-          </div>
-          <dl className="grid grid-cols-1 sm:grid-cols-[120px_minmax(0,1fr)] gap-x-4 gap-y-1.5 mt-2.5 text-[13.5px] leading-relaxed">
-            <dt className="text-muted">What it is</dt>
-            <dd className="m-0">{selected.what}</dd>
-            <dt className="text-muted">What it does</dt>
-            <dd className="m-0">{selected.does}</dd>
-            <dt className="text-muted">Why &ldquo;{(PART_STATUS[selected.status] || PART_STATUS.unknown).label}&rdquo;</dt>
-            <dd className="m-0">
-              {selected.statusWhy?.trim() ||
-                (selected.issues?.length
-                  ? selected.status === "solid"
-                    ? "Reading its code turned up no faults. The points below are worth watching."
-                    : "Because of what was found in its code, listed below."
-                  : selected.status === "solid"
-                    ? "Reading its code turned up no problems."
-                    : "This assessment didn't record a reason. Re-assessing the project adds one.")}
-            </dd>
-            {selected.issues?.length > 0 && (
-              <>
-                <dt className="text-muted">{selected.status === "solid" ? "To watch" : "What was found"}</dt>
-                <dd className="m-0">
-                  <ul className="list-disc pl-4 space-y-0.5">
-                    {selected.issues.map((s, i) => (
-                      <li key={i}>{s}</li>
-                    ))}
-                  </ul>
-                </dd>
-              </>
-            )}
-            <dt className="text-muted">Where it is</dt>
-            <dd className="m-0 font-mono text-[12px] break-all">{selected.path}</dd>
-          </dl>
-        </div>
+      {selected && nodes.current.get(selected.name) && (
+        <PartDetail
+          part={selected}
+          card={nodes.current.get(selected.name)!}
+          changing={isChanging(selected.name)}
+          onClose={() => setSel(null)}
+        />
       )}
     </figure>
+  );
+}
+
+/** The full reasons for one part, in a panel by its card, placed to fit on screen: below the
+ *  card if there's room, otherwise above, otherwise beside it. It follows the card when the page
+ *  scrolls. On a phone it's a sheet along the bottom of the screen. Escape, a click elsewhere,
+ *  or the card again closes it. */
+function PartDetail({
+  part,
+  card,
+  changing,
+  onClose,
+}: {
+  part: ComponentInfo;
+  card: HTMLElement;
+  changing: boolean;
+  onClose: () => void;
+}) {
+  const panel = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ left: number; top: number; width: number } | "sheet" | null>(null);
+
+  useLayoutEffect(() => {
+    const place = () => {
+      const el = panel.current;
+      if (!el) return;
+      const c = card.getBoundingClientRect();
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      if (vw < 640) {
+        setPos("sheet");
+        return;
+      }
+      const M = 12; // keep clear of the window's edges
+      const width = Math.min(420, vw - 2 * M);
+      // Measure at the width it will have: text wraps differently when narrower.
+      el.style.width = `${width}px`;
+      const h = el.offsetHeight;
+      const clampX = (x: number) => Math.min(Math.max(M, x), vw - width - M);
+      const clampY = (y: number) => Math.min(Math.max(M, y), vh - M - h);
+      let left = clampX(c.left + c.width / 2 - width / 2);
+      let top: number;
+      if (c.bottom + 8 + h <= vh - M) top = c.bottom + 8; // below the card
+      else if (c.top - 8 - h >= M) top = c.top - 8 - h; // above it
+      else {
+        // Too tall for either: beside the card, on whichever side has room, or over it if neither.
+        top = clampY(c.top);
+        if (c.right + 8 + width <= vw - M) left = c.right + 8;
+        else if (c.left - 8 - width >= M) left = c.left - 8 - width;
+      }
+      setPos((p) => (p && p !== "sheet" && p.left === left && p.top === top && p.width === width ? p : { left, top, width }));
+    };
+    place();
+    const ro = new ResizeObserver(place);
+    if (panel.current) ro.observe(panel.current);
+    window.addEventListener("scroll", place, true);
+    window.addEventListener("resize", place);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("scroll", place, true);
+      window.removeEventListener("resize", place);
+    };
+  }, [card, part.name]);
+
+  useEffect(() => {
+    const key = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+        card.focus();
+      }
+    };
+    const down = (e: PointerEvent) => {
+      const t = e.target as Element | null;
+      // A card's own click opens, switches or closes the panel.
+      if (t && !panel.current?.contains(t) && !t.closest("[data-part-card]")) onClose();
+    };
+    document.addEventListener("keydown", key);
+    document.addEventListener("pointerdown", down);
+    return () => {
+      document.removeEventListener("keydown", key);
+      document.removeEventListener("pointerdown", down);
+    };
+  }, [card, onClose]);
+
+  const st = PART_STATUS[part.status] || PART_STATUS.unknown;
+  return createPortal(
+    <div
+      ref={panel}
+      role="dialog"
+      aria-label={`About ${part.name}`}
+      className={`fixed z-50 border border-border bg-panel-2 px-4 py-3.5 shadow-2xl overflow-y-auto ${
+        pos === "sheet" ? "inset-x-0 bottom-0 rounded-t-2xl max-h-[70vh]" : "rounded-xl max-h-[calc(100vh-24px)]"
+      }`}
+      style={
+        pos === "sheet" ? undefined : pos ? { left: pos.left, top: pos.top, width: pos.width } : { left: 0, top: 0, visibility: "hidden" }
+      }
+    >
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="font-semibold">{part.name}</span>
+        <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${changing ? "text-accent border-accent/50 bg-accent/10" : TONE_PILL[st.tone]}`}>
+          {changing ? "Being changed now" : st.label}
+        </span>
+        <button onClick={onClose} aria-label="Close" className="ml-auto text-muted hover:text-text text-sm leading-none px-1">
+          ✕
+        </button>
+      </div>
+      <dl className="grid grid-cols-1 sm:grid-cols-[110px_minmax(0,1fr)] gap-x-4 gap-y-1.5 mt-2.5 text-[13px] leading-relaxed">
+        <dt className="text-muted">What it is</dt>
+        <dd className="m-0">{part.what}</dd>
+        <dt className="text-muted">What it does</dt>
+        <dd className="m-0">{part.does}</dd>
+        <dt className="text-muted">Why &ldquo;{st.label}&rdquo;</dt>
+        <dd className="m-0">
+          {part.statusWhy?.trim() ||
+            (part.issues?.length
+              ? part.status === "solid"
+                ? "Reading its code turned up no faults. The points below are worth watching."
+                : "Because of what was found in its code, listed below."
+              : part.status === "solid"
+                ? "Reading its code turned up no problems."
+                : "This assessment didn't record a reason. Re-assessing the project adds one.")}
+        </dd>
+        {part.issues?.length > 0 && (
+          <>
+            <dt className="text-muted">{part.status === "solid" ? "To watch" : "What was found"}</dt>
+            <dd className="m-0">
+              <ul className="list-disc pl-4 space-y-0.5">
+                {part.issues.map((s, i) => (
+                  <li key={i}>{s}</li>
+                ))}
+              </ul>
+            </dd>
+          </>
+        )}
+        <dt className="text-muted">Where it is</dt>
+        <dd className="m-0 font-mono text-[12px] break-all">{part.path}</dd>
+      </dl>
+    </div>,
+    document.body
   );
 }

@@ -11,6 +11,8 @@ import SimpleTask from "@/components/simple/SimpleTask";
 import PartsMap from "@/components/simple/PartsMap";
 import MarkdownView from "@/components/MarkdownView";
 import { isDemoId } from "@/lib/demo-client";
+import GettingStarted from "@/components/simple/GettingStarted";
+import type { StarterInfo } from "@/lib/starter-steps";
 
 const EXAMPLES = [
   "Fix a small mistake I noticed",
@@ -33,6 +35,8 @@ export default function SimpleProject({ params }: { params: Promise<{ id: string
   const [busy, setBusy] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [changingParts, setChangingParts] = useState<Set<string>>(new Set());
+  // Projects made in Start something new: their getting-started steps.
+  const [starter, setStarter] = useState<StarterInfo | null>(null);
   const demo = isDemoId(id);
 
   const load = useCallback(async () => {
@@ -46,6 +50,7 @@ export default function SimpleProject({ params }: { params: Promise<{ id: string
     setPreviewEntry(j.previewEntry || null);
     setTasks((j.docs?.tasks as Task[]) || []);
     setJobs(j.jobs || []);
+    setStarter(j.starter || null);
     // If a task for this project is already running (started here or elsewhere), show it live.
     const liveJob = ((j.jobs || []) as Job[]).find((x) => ["starting", "running", "idle"].includes(x.status));
     if (liveJob) setRunningJob((cur) => cur ?? liveJob.id);
@@ -57,15 +62,25 @@ export default function SimpleProject({ params }: { params: Promise<{ id: string
     return () => clearInterval(t);
   }, [load]);
 
-  const startTask = async () => {
-    if (!taskText.trim()) return;
+  // Arriving from Start something new (?job=…: the run shaping it) or from a preview's
+  // "Make it yours" (?change=1: open the change box).
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    const job = q.get("job");
+    if (job) setRunningJob(job);
+    if (q.get("change") === "1") setTaskOpen(true);
+    if (job || q.has("change")) window.history.replaceState(null, "", window.location.pathname);
+  }, []);
+
+  const startTask = async (text = taskText) => {
+    if (!text.trim()) return;
     setBusy(true);
     const r = await apiFetch("/api/jobs", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         projectId: id,
-        prompt: taskText.trim(),
+        prompt: text.trim(),
         permissionMode: "acceptEdits",
         isolate: gitRepo,
         autoVerify: gitRepo,
@@ -116,6 +131,8 @@ export default function SimpleProject({ params }: { params: Promise<{ id: string
   };
 
   if (!project) return <div className="p-8 text-muted text-sm">Loading…</div>;
+  // While the getting-started steps show, the summary and map aren't chores to do yet.
+  const settingUp = !!starter && !starter.dismissedAt;
 
   return (
     <div className="p-8 max-w-3xl xl:max-w-[1440px] mx-auto">
@@ -133,6 +150,32 @@ export default function SimpleProject({ params }: { params: Promise<{ id: string
           </Link>
         )}
       </div>
+
+      {/* Made in Start something new: the getting-started steps, until they're hidden */}
+      {starter && !starter.dismissedAt && (
+        <GettingStarted
+          projectId={id}
+          name={project.name}
+          starter={starter}
+          jobs={jobs}
+          gitRepo={gitRepo}
+          changeOpen={taskOpen}
+          onAskForChange={(idea) => {
+            if (idea) setTaskText(idea);
+            setTaskOpen(true);
+          }}
+          onRetryShape={async () => {
+            const r = await apiFetch(`/api/projects/${id}/starter`, { method: "POST", body: JSON.stringify({ event: "reshape" }) });
+            const j = await r.json().catch(() => ({}));
+            if (j.jobId) setRunningJob(j.jobId);
+            load();
+          }}
+          onDismiss={async () => {
+            await apiFetch(`/api/projects/${id}/starter`, { method: "POST", body: JSON.stringify({ event: "dismissed" }) }).catch(() => {});
+            load();
+          }}
+        />
+      )}
 
       {/* What you can do here: always at the top of the page */}
       {!runningJob && (
@@ -173,7 +216,7 @@ export default function SimpleProject({ params }: { params: Promise<{ id: string
             className="w-full px-3 py-2.5 rounded-xl bg-bg border border-border text-sm focus:outline-none focus:border-accent/60 resize-y"
           />
           <div className="flex flex-wrap gap-1.5 mt-2">
-            {EXAMPLES.map((ex) => (
+            {(starter?.ideas?.length ? starter.ideas : EXAMPLES).map((ex) => (
               <button
                 key={ex}
                 onClick={() => setTaskText(ex)}
@@ -190,7 +233,7 @@ export default function SimpleProject({ params }: { params: Promise<{ id: string
                 : "The changes will be made directly in this project."}
             </p>
             <button
-              onClick={startTask}
+              onClick={() => startTask()}
               disabled={busy || !taskText.trim()}
               className="px-4 py-2 rounded-xl bg-accent/20 border border-accent/40 text-accent hover:bg-accent/30 text-sm font-semibold disabled:opacity-40"
             >
@@ -251,6 +294,11 @@ export default function SimpleProject({ params }: { params: Promise<{ id: string
               </button>
             )}
           </div>
+        ) : settingUp ? (
+          <p className="text-[12.5px] text-muted">
+            A plain-English summary of {project.name} can be written once you&apos;ve shaped it. The button for it appears here
+            when you hide the getting-started steps.
+          </p>
         ) : (
           <div className="rounded-2xl border border-border bg-panel p-6 text-center">
             <div className="text-3xl mb-2">📄</div>
@@ -279,6 +327,11 @@ export default function SimpleProject({ params }: { params: Promise<{ id: string
           <div className="rounded-2xl border border-border bg-panel p-5">
             <PartsMap assessment={assessment} changing={changingParts} />
           </div>
+        ) : settingUp ? (
+          <p className="text-[12.5px] text-muted">
+            A map of the parts of {project.name} and how they connect can be drawn once you&apos;ve shaped it. The button for it
+            appears here when you hide the getting-started steps.
+          </p>
         ) : (
           <div className="rounded-2xl border border-border bg-panel p-5 text-sm text-muted">
             Protégé hasn&apos;t drawn a map of this project yet. It reads the code and shows the main parts and how they connect.
@@ -305,7 +358,12 @@ export default function SimpleProject({ params }: { params: Promise<{ id: string
           <p className="text-[11px] text-muted mb-2">Everything Protégé has done here. Nothing is ever lost — you can undo a change you kept.</p>
           <div className="rounded-2xl border border-border bg-panel divide-y divide-border">
             {jobs.slice(0, 8).map((j) => (
-              <HistoryItem key={j.id} job={j} onChange={load} />
+              <HistoryItem
+                key={j.id}
+                job={j}
+                onChange={load}
+                title={j.id === starter?.buildJobId && starter.description ? `Shaping it: “${starter.description}”` : undefined}
+              />
             ))}
           </div>
         </section>
@@ -409,7 +467,7 @@ function ProgressBlock({
   );
 }
 
-function HistoryItem({ job, onChange }: { job: Job; onChange: () => void }) {
+function HistoryItem({ job, onChange, title }: { job: Job; onChange: () => void; title?: string }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [undone] = useState(false);
@@ -429,7 +487,7 @@ function HistoryItem({ job, onChange }: { job: Job; onChange: () => void }) {
   return (
     <div className="px-4 py-3 flex items-center gap-3">
       <span className={`text-xs font-medium shrink-0 w-24 ${TONE_CLASS[ps.tone]}`}>{ps.label}</span>
-      <span className="text-sm truncate flex-1">{job.prompt}</span>
+      <span className="text-sm truncate flex-1">{title || job.prompt}</span>
       {msg && <span className="text-[11px] text-warn max-w-[30%] truncate">{msg}</span>}
       {undone ? (
         <span className="text-[11px] text-muted shrink-0">undone</span>

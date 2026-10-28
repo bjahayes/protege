@@ -9,6 +9,8 @@ export default function SimplePreview({ params }: { params: Promise<{ id: string
   const [name, setName] = useState<string>("");
   const [hasPreview, setHasPreview] = useState<boolean | null>(null);
   const [nonce, setNonce] = useState(0);
+  // A project made in Start something new: opening its preview is the "Try it" step.
+  const [starterNext, setStarterNext] = useState(false);
   const [device, setDevice] = useState<"desktop" | "phone">("desktop");
   // Previews come from their own origin (a separate small server), never Protégé's own.
   const [origin, setOrigin] = useState<string | null>(null);
@@ -26,6 +28,11 @@ export default function SimplePreview({ params }: { params: Promise<{ id: string
       .then((j) => {
         setName(j.project?.name || "Preview");
         setHasPreview(!!j.previewEntry);
+        if (j.starter && !j.starter.dismissedAt) {
+          setStarterNext(true);
+          if (!j.starter.triedAt)
+            apiFetch(`/api/projects/${id}/starter`, { method: "POST", body: JSON.stringify({ event: "tried" }) }).catch(() => {});
+        }
       })
       .catch(() => setHasPreview(false));
   }, [id]);
@@ -45,6 +52,14 @@ export default function SimplePreview({ params }: { params: Promise<{ id: string
           Live preview
         </span>
         <div className="flex-1" />
+        {starterNext && (
+          <Link
+            href={`/simple/project/${id}?change=1`}
+            className="text-xs px-3 py-1.5 rounded-lg bg-accent/20 border border-accent/40 text-accent hover:bg-accent/30 font-semibold"
+          >
+            Next: make it yours →
+          </Link>
+        )}
         <div className="flex items-center gap-1 rounded-lg border border-border p-0.5 text-xs">
           <button
             onClick={() => setDevice("desktop")}

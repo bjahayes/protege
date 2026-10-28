@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { readStarter } from "@/lib/starter";
+import { getTemplate } from "@/lib/templates";
 import { projectDir, unknownProject } from "@/lib/project-guard";
 import { getProject, sessionsForCwd } from "@/lib/discovery";
 import { readProjectDocs, scaffoldProject } from "@/lib/docs";
@@ -35,12 +37,15 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const plainSummary = project.exists ? readPlainSummary(projectPath) : null;
   const gitRepo = project.exists ? await isGitRepo(projectPath) : false;
   const previewEntry = project.exists ? findPreviewEntry(projectPath) : null;
+  // Projects made in Start something new: where they are in the getting-started steps.
+  const record = project.exists ? readStarter(projectPath) : null;
+  const starter = record ? { ...record, ideas: getTemplate(record.template)?.ideas || [] } : null;
   // Concrete progress from the task board (the honest basis for "how far along").
   const tasks = docs.tasks || [];
   const doneT = tasks.filter((t: any) => t.status === "done").map((t: any) => t.title);
   const remT = tasks.filter((t: any) => t.status !== "done").map((t: any) => t.title);
   const progress = doneT.length + remT.length > 0 ? { done: doneT, remaining: remT } : null;
-  return NextResponse.json({ project, docs, sessions, jobs, assessment, plainSummary, gitRepo, previewEntry, progress });
+  return NextResponse.json({ project, docs, sessions, jobs, assessment, plainSummary, gitRepo, previewEntry, progress, starter });
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

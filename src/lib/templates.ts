@@ -45,6 +45,12 @@ export interface Template {
   emoji: string;
   blurb: string; // one line, plain English
   whatYouGet: string; // what the starter already does
+  /** Example of saying what it's for, shown in the description box. */
+  describeHint: string;
+  /** A blank start has nothing to try until Protégé builds it, so it needs a description. */
+  needsDescription?: boolean;
+  /** Ideas for a first change, offered at "Make it yours". */
+  ideas: string[];
   /** The entry file to open in a live preview. */
   preview: string;
   files: Record<string, string>;
@@ -212,6 +218,12 @@ export const TEMPLATES: Template[] = [
     emoji: "🧰",
     blurb: "A small tool that runs in a web browser.",
     whatYouGet: "A working word & character counter you can open and use right away — a starting point to shape into your own tool.",
+    describeHint: "e.g. 'Count the words in a contract and flag any sentence longer than 40 words.'",
+    ideas: [
+      "Show how long the text would take to read aloud",
+      "Highlight any sentence longer than 40 words",
+      "Add a button that copies the counts",
+    ],
     preview: "index.html",
     files: {
       "index.html": WEB_TOOL_HTML,
@@ -227,6 +239,12 @@ export const TEMPLATES: Template[] = [
     emoji: "📄",
     blurb: "Fill in a few fields, get a finished document.",
     whatYouGet: "A form that merges your details into a letter, with Copy and Print/Save-as-PDF buttons.",
+    describeHint: "e.g. 'Make it produce a short engagement letter with the client's name, the matter and our fees.'",
+    ideas: [
+      "Add a field for the client's reference number",
+      "Put our firm's name and address at the top of the letter",
+      "Change the letter into a short engagement letter",
+    ],
     preview: "index.html",
     files: {
       "index.html": DOC_HTML,
@@ -242,6 +260,12 @@ export const TEMPLATES: Template[] = [
     emoji: "✅",
     blurb: "A simple list you tick off, saved in your browser.",
     whatYouGet: "A working checklist that remembers items between visits.",
+    describeHint: "e.g. 'Track the documents we need from a client, with a due date on each.'",
+    ideas: [
+      "Add a due date to each item",
+      "Show how many items are left at the top",
+      "Group the items under headings",
+    ],
     preview: "index.html",
     files: {
       "index.html": CHECKLIST_HTML,
@@ -257,6 +281,13 @@ export const TEMPLATES: Template[] = [
     emoji: "✨",
     blurb: "Start from a blank project and describe what you want.",
     whatYouGet: "An empty project — Protégé builds it from your description.",
+    describeHint: "Describe what you'd like to build, in plain words: who uses it, and what it should do.",
+    needsDescription: true,
+    ideas: [
+      "Make the page look tidier",
+      "Add a short section explaining how to use it",
+      "Add a button that copies the result",
+    ],
     preview: "index.html",
     files: {
       "index.html": `<!doctype html>
@@ -282,7 +313,15 @@ export function getTemplate(id: string): Template | undefined {
 
 /** Public-facing metadata (no file bodies) for the picker UI. */
 export function templateList() {
-  return TEMPLATES.map(({ id, name, emoji, blurb, whatYouGet }) => ({ id, name, emoji, blurb, whatYouGet }));
+  return TEMPLATES.map(({ id, name, emoji, blurb, whatYouGet, describeHint, needsDescription }) => ({
+    id,
+    name,
+    emoji,
+    blurb,
+    whatYouGet,
+    describeHint,
+    needsDescription: !!needsDescription,
+  }));
 }
 
 export interface CreatedProject {
