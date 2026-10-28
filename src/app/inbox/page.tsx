@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/api-client";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { timeAgo } from "@/lib/format";
@@ -30,7 +31,7 @@ export default function InboxPage() {
 
   const load = useCallback(async () => {
     try {
-      const r = await fetch("/api/inbox", { cache: "no-store" });
+      const r = await apiFetch("/api/inbox", { cache: "no-store" });
       const j = await r.json();
       setItems(j.items || []);
     } catch {

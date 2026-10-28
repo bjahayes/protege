@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/api-client";
 import { useEffect, useState } from "react";
 
 interface Props {
@@ -97,7 +98,7 @@ export default function RunForm({ projectId, gitRepo, resume, onClearResume, onL
     setBusy(true);
     setErr(null);
     try {
-      const r = await fetch("/api/jobs", {
+      const r = await apiFetch("/api/jobs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

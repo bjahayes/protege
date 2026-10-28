@@ -2,6 +2,7 @@
 
 // Simple home: every task Protégé is working on right now, with its stage.
 
+import { apiFetch } from "@/lib/api-client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { Job } from "@/lib/types";
@@ -22,7 +23,7 @@ export default function LiveStrip() {
   useEffect(() => {
     let stop = false;
     const load = () =>
-      fetch("/api/jobs", { cache: "no-store" })
+      apiFetch("/api/jobs", { cache: "no-store" })
         .then((r) => r.json())
         .then((j) => !stop && setLive((j.live || [])))
         .catch(() => {});

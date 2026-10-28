@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/api-client";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { fmtCost, fmtTokens, timeAgo } from "@/lib/format";
@@ -25,7 +26,7 @@ export default function CostsPage() {
 
   const load = useCallback(async () => {
     try {
-      const r = await fetch("/api/costs", { cache: "no-store" });
+      const r = await apiFetch("/api/costs", { cache: "no-store" });
       setData(await r.json());
     } catch {
       /* ignore */

@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/api-client";
 import { useEffect, useMemo, useState } from "react";
 import Chat from "./Chat";
 
@@ -15,7 +16,7 @@ export default function BrainChat() {
   const [titles, setTitles] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    fetch("/api/brain", { cache: "no-store" })
+    apiFetch("/api/brain", { cache: "no-store" })
       .then((r) => r.json())
       .then((j) => {
         const map: Record<string, string> = {};

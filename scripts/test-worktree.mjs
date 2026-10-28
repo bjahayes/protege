@@ -7,6 +7,8 @@ import os from "os";
 import path from "path";
 
 const BASE = "http://127.0.0.1:4317";
+// Protégé's API needs this install's access key (made by `npm run dev`).
+const TOKEN = fs.readFileSync(new URL("../data/install-token", import.meta.url), "utf8").trim();
 function tempRepo() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "protege-wt-test-"));
   const git = (...a) => execFileSync("git", a, { cwd: dir });
@@ -19,7 +21,7 @@ function tempRepo() {
 const REPO = process.argv[2] || tempRepo();
 
 const j = async (url, opts) => {
-  const r = await fetch(BASE + url, opts);
+  const r = await fetch(BASE + url, { ...opts, headers: { ...(opts?.headers || {}), "X-Protege-Token": TOKEN } });
   return { status: r.status, body: await r.json().catch(() => null) };
 };
 const post = (url, data) =>

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { projectDir, unknownProject } from "@/lib/project-guard";
 import fs from "fs";
-import { pathFromProjectId } from "@/lib/config";
 import {
   listCheckpoints,
   createCheckpoint,
@@ -14,7 +14,8 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const dir = pathFromProjectId(id);
+  const dir = await projectDir(id);
+  if (!dir) return unknownProject();
   const exportId = req.nextUrl.searchParams.get("export");
   if (exportId) {
     const data = exportCheckpoint(dir, exportId);
@@ -26,7 +27,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const dir = pathFromProjectId(id);
+  const dir = await projectDir(id);
+  if (!dir) return unknownProject();
   if (!fs.existsSync(dir)) return NextResponse.json({ error: "Project folder missing" }, { status: 400 });
   const body = await req.json().catch(() => ({}));
 

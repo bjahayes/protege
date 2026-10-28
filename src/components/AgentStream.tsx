@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/api-client";
 import { useEffect, useRef, useState } from "react";
 import type { Job, JobEvent } from "@/lib/types";
 import StatusBadge from "./StatusBadge";
@@ -33,7 +34,7 @@ export default function AgentStream({ jobId, compact }: Props) {
       setEvents((prev) => [...prev, ev]);
       if (ev.type === "system" || ev.type === "result" || ev.type === "status") {
         // refresh job meta lazily
-        fetch(`/api/jobs/${jobId}`, { cache: "no-store" })
+        apiFetch(`/api/jobs/${jobId}`, { cache: "no-store" })
           .then((r) => r.json())
           .then((j) => j.job && setJob(j.job))
           .catch(() => {});
@@ -42,7 +43,7 @@ export default function AgentStream({ jobId, compact }: Props) {
     es.addEventListener("end", () => {
       setEnded(true);
       es.close();
-      fetch(`/api/jobs/${jobId}`, { cache: "no-store" })
+      apiFetch(`/api/jobs/${jobId}`, { cache: "no-store" })
         .then((r) => r.json())
         .then((j) => j.job && setJob(j.job))
         .catch(() => {});
@@ -66,13 +67,13 @@ export default function AgentStream({ jobId, compact }: Props) {
   };
 
   const stop = async () => {
-    await fetch(`/api/jobs/${jobId}/stop`, { method: "POST" });
+    await apiFetch(`/api/jobs/${jobId}/stop`, { method: "POST" });
   };
 
   const rate = async () => {
     setEvalR({ loading: true });
     try {
-      const r = await fetch(`/api/jobs/${jobId}/eval`, { method: "POST" });
+      const r = await apiFetch(`/api/jobs/${jobId}/eval`, { method: "POST" });
       setEvalR(await r.json());
     } catch (e: any) {
       setEvalR({ verdict: "error", reason: String(e?.message || e) });
@@ -83,7 +84,7 @@ export default function AgentStream({ jobId, compact }: Props) {
   const saveMemory = async () => {
     setMemState("loading");
     try {
-      await fetch(`/api/jobs/${jobId}/memory`, { method: "POST" });
+      await apiFetch(`/api/jobs/${jobId}/memory`, { method: "POST" });
       setMemState("done");
     } catch {
       setMemState("");

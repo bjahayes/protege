@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/api-client";
 import { useEffect, useState, useCallback } from "react";
 import { timeAgo } from "@/lib/format";
 import type { CheckpointMeta } from "@/lib/checkpoints";
@@ -12,7 +13,7 @@ export default function CheckpointsPanel({ projectId, onRestore }: { projectId: 
 
   const load = useCallback(async () => {
     try {
-      const r = await fetch(`/api/projects/${projectId}/checkpoints`, { cache: "no-store" });
+      const r = await apiFetch(`/api/projects/${projectId}/checkpoints`, { cache: "no-store" });
       const j = await r.json();
       setList(j.checkpoints || []);
     } catch {
@@ -26,7 +27,7 @@ export default function CheckpointsPanel({ projectId, onRestore }: { projectId: 
 
   const post = async (body: any) => {
     setBusy(true);
-    const r = await fetch(`/api/projects/${projectId}/checkpoints`, {
+    const r = await apiFetch(`/api/projects/${projectId}/checkpoints`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
@@ -55,7 +56,7 @@ export default function CheckpointsPanel({ projectId, onRestore }: { projectId: 
   };
 
   const exportCp = async (id: string, cpName: string) => {
-    const r = await fetch(`/api/projects/${projectId}/checkpoints?export=${id}`, { cache: "no-store" });
+    const r = await apiFetch(`/api/projects/${projectId}/checkpoints?export=${id}`, { cache: "no-store" });
     const data = await r.json();
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);

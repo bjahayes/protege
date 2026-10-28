@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/api-client";
 import { useEffect, useState, useCallback, use } from "react";
 import Link from "next/link";
 import type { ProjectSummary, Job, Task } from "@/lib/types";
@@ -35,7 +36,7 @@ export default function SimpleProject({ params }: { params: Promise<{ id: string
   const demo = isDemoId(id);
 
   const load = useCallback(async () => {
-    const r = await fetch(`/api/projects/${id}`, { cache: "no-store" });
+    const r = await apiFetch(`/api/projects/${id}`, { cache: "no-store" });
     if (!r.ok) return;
     const j = await r.json();
     setProject(j.project);
@@ -59,7 +60,7 @@ export default function SimpleProject({ params }: { params: Promise<{ id: string
   const startTask = async () => {
     if (!taskText.trim()) return;
     setBusy(true);
-    const r = await fetch("/api/jobs", {
+    const r = await apiFetch("/api/jobs", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -84,7 +85,7 @@ export default function SimpleProject({ params }: { params: Promise<{ id: string
 
   const createSummary = async () => {
     setBusy(true);
-    const r = await fetch(`/api/projects/${id}/plain-summary`, {
+    const r = await apiFetch(`/api/projects/${id}/plain-summary`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({}),
@@ -96,7 +97,7 @@ export default function SimpleProject({ params }: { params: Promise<{ id: string
 
   const mapProject = async () => {
     setBusy(true);
-    const r = await fetch(`/api/projects/${id}/assess`, {
+    const r = await apiFetch(`/api/projects/${id}/assess`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({}),
@@ -248,7 +249,11 @@ export default function SimpleProject({ params }: { params: Promise<{ id: string
           >
             <div className="text-2xl mb-1.5">✍️</div>
             <div className="font-semibold">Ask Protégé to make a change</div>
-            <div className="text-sm text-muted mt-0.5">It works on a safe copy and shows you before keeping anything.</div>
+            <div className="text-sm text-muted mt-0.5">
+              {gitRepo
+                ? "It works on a safe copy and shows you before keeping anything."
+                : "It changes this project's files directly, so ask a question first if you're unsure."}
+            </div>
           </button>
         </section>
       )}
@@ -313,7 +318,7 @@ export default function SimpleProject({ params }: { params: Promise<{ id: string
             onClick={async () => {
               if (!confirm("Reset this demo project back to how it started? Any changes here will be cleared.")) return;
               setResetting(true);
-              await fetch(`/api/projects/${id}/reset`, { method: "POST" }).catch(() => {});
+              await apiFetch(`/api/projects/${id}/reset`, { method: "POST" }).catch(() => {});
               setResetting(false);
               load();
             }}
@@ -414,7 +419,7 @@ function HistoryItem({ job, onChange }: { job: Job; onChange: () => void }) {
     if (!confirm("Undo this change? It will put things back the way they were before.")) return;
     setBusy(true);
     setMsg(null);
-    const r = await fetch(`/api/jobs/${job.id}/undo`, { method: "POST" });
+    const r = await apiFetch(`/api/jobs/${job.id}/undo`, { method: "POST" });
     const j = await r.json();
     setBusy(false);
     if (j.ok) onChange();

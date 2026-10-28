@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/api-client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -14,8 +15,8 @@ export default function SidebarNav() {
     const load = async () => {
       try {
         const [jobs, inbox] = await Promise.all([
-          fetch("/api/jobs", { cache: "no-store" }).then((r) => r.json()),
-          fetch("/api/inbox", { cache: "no-store" }).then((r) => r.json()),
+          apiFetch("/api/jobs", { cache: "no-store" }).then((r) => r.json()),
+          apiFetch("/api/inbox", { cache: "no-store" }).then((r) => r.json()),
         ]);
         if (!stop) {
           setLiveCount((jobs.live || []).length);

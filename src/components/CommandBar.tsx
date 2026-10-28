@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/api-client";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import type { ProjectSummary } from "@/lib/types";
@@ -44,7 +45,7 @@ export default function CommandBar() {
   // Load projects lazily when the palette opens.
   useEffect(() => {
     if (open && projects.length === 0) {
-      fetch("/api/projects", { cache: "no-store" })
+      apiFetch("/api/projects", { cache: "no-store" })
         .then((r) => r.json())
         .then((j) => setProjects(j.projects || []))
         .catch(() => {});

@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/api-client";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import type { ProjectSummary } from "@/lib/types";
@@ -15,7 +16,7 @@ export default function Dashboard() {
 
   const load = useCallback(async () => {
     try {
-      const r = await fetch("/api/projects", { cache: "no-store" });
+      const r = await apiFetch("/api/projects", { cache: "no-store" });
       const j = await r.json();
       setProjects(j.projects || []);
     } catch {
@@ -200,7 +201,7 @@ function AddProjectDialog({ onClose, onDone }: { onClose: () => void; onDone: ()
     setBusy(true);
     setErr(null);
     try {
-      const r = await fetch("/api/projects", {
+      const r = await apiFetch("/api/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ path, name: name || undefined, scaffold }),

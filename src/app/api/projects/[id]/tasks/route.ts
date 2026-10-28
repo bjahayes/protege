@@ -1,25 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
-import { pathFromProjectId } from "@/lib/config";
+import { projectDir, unknownProject } from "@/lib/project-guard";
 import { readTasks, writeTasks } from "@/lib/docs";
-import { isDemoId, materializeDemo } from "@/lib/demo";
+import { isDemoId } from "@/lib/demo";
 import type { Task } from "@/lib/types";
 import { randomUUID } from "crypto";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function dirFor(id: string): string {
-  return isDemoId(id) ? materializeDemo(id) : pathFromProjectId(id);
-}
+
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  return NextResponse.json({ tasks: readTasks(dirFor(id)) });
+  const dir = await projectDir(id);
+  if (!dir) return unknownProject();
+  return NextResponse.json({ tasks: readTasks(dir) });
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const dir = dirFor(id);
+  const dir = await projectDir(id);
+  if (!dir) return unknownProject();
   const body = await req.json().catch(() => ({}));
   const tasks = readTasks(dir);
   const now = Date.now();

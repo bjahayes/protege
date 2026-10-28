@@ -60,7 +60,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <main className="flex-1 min-w-0 flex flex-col">
         <SignInBanner />
         {/* Pages scroll here, so the sign-in banner never pushes a full-height page off screen. */}
-        <div id="main-scroll" className="flex-1 min-h-0 overflow-y-auto">
+        <div id="main-scroll" className="flex-1 min-h-0 overflow-y-auto" style={{ scrollbarGutter: "stable" }}>
           {children}
         </div>
       </main>

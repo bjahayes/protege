@@ -1,0 +1,4 @@
+# Store text with LF line endings everywhere, so diffs don't depend on whose computer made them.
+* text=auto eol=lf
+*.png binary
+*.ico binary

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { projectDir, unknownProject } from "@/lib/project-guard";
 import fs from "fs";
 import { query } from "@/lib/engine";
-import { pathFromProjectId } from "@/lib/config";
 import {
   readSuggestions,
   writeSuggestions,
@@ -52,7 +52,8 @@ async function generate(dir: string): Promise<Suggestion[]> {
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (isDemoId(id)) return NextResponse.json({ suggestions: demoSuggestions(id), cached: true });
-  const dir = pathFromProjectId(id);
+  const dir = await projectDir(id);
+  if (!dir) return unknownProject();
   if (!fs.existsSync(dir)) return NextResponse.json({ suggestions: FALLBACK });
 
   const refresh = req.nextUrl.searchParams.get("refresh") === "1";

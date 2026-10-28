@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/api-client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -24,7 +25,7 @@ export default function SimpleNew() {
   const [created, setCreated] = useState<{ projectId: string; jobId?: string } | null>(null);
 
   useEffect(() => {
-    fetch("/api/templates", { cache: "no-store" })
+    apiFetch("/api/templates", { cache: "no-store" })
       .then((r) => r.json())
       .then((j) => setTemplates(j.templates || []))
       .catch(() => setTemplates([]));
@@ -35,7 +36,7 @@ export default function SimpleNew() {
     setBusy(true);
     setError(null);
     try {
-      const r = await fetch("/api/projects/create", {
+      const r = await apiFetch("/api/projects/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ templateId: picked.id, name: name.trim(), description: description.trim() }),

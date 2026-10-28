@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/api-client";
 import { useEffect, useState, useCallback, useRef, use } from "react";
 import Link from "next/link";
 import type { ProjectSummary, SessionInfo, Job, Task } from "@/lib/types";
@@ -49,7 +50,7 @@ export default function ProjectDetail({ params }: { params: Promise<{ id: string
   }, []);
 
   const load = useCallback(async () => {
-    const r = await fetch(`/api/projects/${id}`, { cache: "no-store" });
+    const r = await apiFetch(`/api/projects/${id}`, { cache: "no-store" });
     if (r.status === 404) {
       setNotFound(true);
       return;
@@ -342,7 +343,7 @@ function MapTab({
   const [runningJob, setRunningJob] = useState<string | null>(null);
 
   const assess = useCallback(async () => {
-    const r = await fetch(`/api/projects/${projectId}/assess`, {
+    const r = await apiFetch(`/api/projects/${projectId}/assess`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({}),
@@ -536,7 +537,7 @@ function DocPane({
   }
   const scaffold = async () => {
     setBusy(true);
-    await fetch(`/api/projects/${projectId}`, {
+    await apiFetch(`/api/projects/${projectId}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "scaffold" }),
@@ -708,7 +709,7 @@ function SessionTranscript({
   useEffect(() => {
     if (!live) return;
     const tick = () => {
-      fetch(`/api/sessions/${sessionId}?cwd=${encodeURIComponent(cwd)}&limit=80`, { cache: "no-store" })
+      apiFetch(`/api/sessions/${sessionId}?cwd=${encodeURIComponent(cwd)}&limit=80`, { cache: "no-store" })
         .then((r) => r.json())
         .then((j) => {
           setMeta({ total: j.total, start: j.start, hasOlder: j.hasOlder });

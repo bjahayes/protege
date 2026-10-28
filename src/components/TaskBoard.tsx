@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/api-client";
 import { useState } from "react";
 import type { Task } from "@/lib/types";
 
@@ -19,7 +20,7 @@ export default function TaskBoard({ projectId, initial }: Props) {
   const [newTitle, setNewTitle] = useState("");
 
   const mutate = async (body: any) => {
-    const r = await fetch(`/api/projects/${projectId}/tasks`, {
+    const r = await apiFetch(`/api/projects/${projectId}/tasks`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),

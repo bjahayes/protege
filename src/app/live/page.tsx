@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/api-client";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import type { Job } from "@/lib/types";
@@ -25,8 +26,8 @@ export default function LivePage() {
   const load = useCallback(async () => {
     try {
       const [jr, sr] = await Promise.all([
-        fetch("/api/jobs", { cache: "no-store" }).then((r) => r.json()),
-        fetch("/api/sessions/active?window=90", { cache: "no-store" }).then((r) => r.json()),
+        apiFetch("/api/jobs", { cache: "no-store" }).then((r) => r.json()),
+        apiFetch("/api/sessions/active?window=90", { cache: "no-store" }).then((r) => r.json()),
       ]);
       setLive(jr.live || []);
       setSessions(sr.sessions || []);
@@ -50,13 +51,13 @@ export default function LivePage() {
   }, []);
 
   const stop = async (id: string) => {
-    await fetch(`/api/jobs/${id}/stop`, { method: "POST" });
+    await apiFetch(`/api/jobs/${id}/stop`, { method: "POST" });
     load();
   };
 
   const stopAll = async () => {
     if (!confirm(`Stop all ${live.length} running agent(s)?`)) return;
-    await fetch(`/api/jobs/stop-all`, { method: "POST" });
+    await apiFetch(`/api/jobs/stop-all`, { method: "POST" });
     load();
   };
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/api-client";
 import { useEffect, useMemo, useState } from "react";
 import Chat from "@/components/Chat";
 import type { ProjectSummary } from "@/lib/types";
@@ -26,7 +27,7 @@ export default function SimpleAsk() {
   const [initialQ, setInitialQ] = useState("");
 
   useEffect(() => {
-    fetch("/api/projects", { cache: "no-store" })
+    apiFetch("/api/projects", { cache: "no-store" })
       .then((r) => r.json())
       .then((j) => {
         const ps: ProjectSummary[] = (j.projects || []).filter((p: ProjectSummary) => p.exists);
@@ -41,7 +42,7 @@ export default function SimpleAsk() {
         if (q) setInitialQ(q);
       })
       .catch(() => {});
-    fetch("/api/brain", { cache: "no-store" })
+    apiFetch("/api/brain", { cache: "no-store" })
       .then((r) => r.json())
       .then((j) => {
         const map: Record<string, string> = {};

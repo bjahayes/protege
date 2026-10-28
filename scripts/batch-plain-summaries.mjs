@@ -1,6 +1,10 @@
+import fs from "fs";
 const BASE = "http://127.0.0.1:4317";
-const get = (u) => fetch(BASE + u).then((r) => r.json());
-const post = (u, d) => fetch(BASE + u, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(d || {}) }).then((r) => r.json());
+// Protégé's API needs this install's access key (made by `npm run dev`).
+const TOKEN = fs.readFileSync(new URL("../data/install-token", import.meta.url), "utf8").trim();
+const get = (u) => fetch(BASE + u, { headers: { "X-Protege-Token": TOKEN } }).then((r) => r.json());
+const post = (u, d) =>
+  fetch(BASE + u, { method: "POST", headers: { "Content-Type": "application/json", "X-Protege-Token": TOKEN }, body: JSON.stringify(d || {}) }).then((r) => r.json());
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // Skip discovery noise (temp/scratch dirs) and the test repo.

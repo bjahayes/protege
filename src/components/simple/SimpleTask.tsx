@@ -4,6 +4,7 @@
 // Claude Code, the five-stage track, the files and parts being changed, the keep / throw away
 // review for the safe copy, and a reply box that continues the same Claude Code session.
 
+import { apiFetch } from "@/lib/api-client";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Job, JobEvent } from "@/lib/types";
 import type { ComponentInfo } from "@/lib/assessment";
@@ -26,7 +27,7 @@ function JobFeed({ jobId, onUpdate }: { jobId: string; onUpdate: (id: string, f:
       raf = requestAnimationFrame(() => onUpdate(jobId, { job, events, ended }));
     };
     const refetch = () =>
-      fetch(`/api/jobs/${jobId}`, { cache: "no-store" })
+      apiFetch(`/api/jobs/${jobId}`, { cache: "no-store" })
         .then((r) => r.json())
         .then((j) => {
           if (j.job) job = j.job;
@@ -123,7 +124,7 @@ export default function SimpleTask({
     const text = reply.trim();
     if (!text || sending) return;
     setSending(true);
-    const r = await fetch("/api/jobs", {
+    const r = await apiFetch("/api/jobs", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -146,7 +147,7 @@ export default function SimpleTask({
     }
   };
 
-  const stop = () => fetch(`/api/jobs/${latestId}/stop`, { method: "POST" }).catch(() => {});
+  const stop = () => apiFetch(`/api/jobs/${latestId}/stop`, { method: "POST" }).catch(() => {});
 
   return (
     <div className="rounded-2xl border border-border bg-panel p-5">

@@ -23,13 +23,16 @@ to deploy and no API key to set up.
 ## Quick start
 
 ```bash
-git clone <this repo>
+git clone https://github.com/bjahayes/protege.git
 cd protege
 npm install
 npm run dev
 ```
 
 Then open **http://127.0.0.1:4317**.
+
+Start it with `npm run dev` (or `npm run build` then `npm start`), not `next dev` directly: the
+npm scripts set up this install's access key (see [Safety](#safety)).
 
 ## What it does
 
@@ -70,6 +73,7 @@ All optional, set as environment variables before `npm run dev`:
 | `PROTEGE_CLAUDE_PATH` | Full path to the `claude` program, if Protégé can't find it on your `PATH`. |
 | `PROTEGE_ENGINE=sdk` | Run tasks through the Claude Agent SDK instead of the `claude` program. Chats always use the SDK, pointed at your `claude` program. |
 | `PROTEGE_ALLOW_API_KEY=1` | Allow Claude Code to use an API key (billed per token). Without it, Protégé removes `ANTHROPIC_API_KEY` and stops any run that would bill an API key instead of your Claude plan. |
+| `PROTEGE_PREVIEW_PORT` | The port project previews are served on. Defaults to the port after Protégé's (4318). |
 
 ## Where things are kept
 
@@ -78,14 +82,35 @@ All optional, set as environment variables before `npm run dev`:
 - Protégé's own records (registered projects, agent run history and their event logs) are in
   `data/protege.db`. Delete it to start afresh.
 - Per-project notes Protégé writes live in each project's `.protege/` folder
-  (`assessment.json` for the parts diagram, `tasks.json` for the checklist, `status.md`).
+  (`assessment.json` for the parts diagram, `tasks.json` for the checklist, `status.md`). In a
+  git project, Protégé lists that folder in the repository's local ignore list
+  (`.git/info/exclude`, which isn't committed), so its notes never show up as changes.
+- This install's access key is in `data/install-token`.
 
 ## Safety
 
-- Protégé only listens on your own computer (localhost).
-- Anything it runs, it runs as you, with your Claude Code sign-in and settings, exactly as if you
-  had run Claude Code yourself. Pick the permission mode to suit the folder.
+Protégé runs Claude Code as you, so it is built to answer only you, on this computer:
+
+- **Only on this computer.** It listens on 127.0.0.1 only: port 4317 for the app, 4318 for
+  project previews. Other computers on your network can't reach it.
+- **Only Protégé's own pages.** Its API refuses requests that don't come from a Protégé page:
+  it checks the address the request was sent to (127.0.0.1 or localhost only), where the
+  request came from, that changes are sent as JSON, and a per-install access key. Your browser
+  gets the key as a cookie when you open Protégé; other websites can't send or read it. Scripts
+  can send it in an `X-Protege-Token` header (it's in `data/install-token`).
+- **Only projects it knows.** It works only in folders you registered, folders you've used
+  Claude Code in, and its demo projects.
+- **Previews are kept apart.** A project's web page is shown from its own origin (port 4318), in
+  a sandboxed frame, and can't act on Protégé.
+- **Checks are the project's own.** "Run checks" runs only the test or build command the project
+  itself defines.
+- **Safe copies where possible.** In git projects, changes are made on a separate copy and kept
+  only when you say so; elsewhere they're made directly, and Protégé says so first.
+- Anything it runs, it runs with your Claude Code sign-in and settings, exactly as if you had
+  run Claude Code yourself. Pick the permission mode to suit the folder.
 - Every agent run's prompt and full event stream is kept in `data/protege.db`.
+
+See [SECURITY.md](SECURITY.md) to report a security problem.
 
 ## How it's built
 
@@ -102,5 +127,21 @@ Next.js 15 (App Router, TypeScript), Tailwind, SQLite (better-sqlite3) and the C
   Server-Sent Events.
 - `src/lib/wire-route.ts`: lays out the arrows in the parts diagram so they never cross a card or
   each other, with a checker that counts any that do.
+- `src/middleware.ts` and `scripts/serve.mjs`: the request checks and the per-install access key.
+- `src/lib/project-guard.ts`: the one way a route turns a project id into a folder.
+- `src/lib/preview-server.ts`: serves project previews from their own origin.
+- `src/lib/git.ts`: safe copies (git worktrees), Keep, undo and saving to history.
 
-See [DESIGN.md](DESIGN.md) for the design and roadmap.
+## Tests
+
+```bash
+npm test
+```
+
+runs two checks that need no model calls: the parts-diagram arrow layout over generated layouts
+(`npm run test:diagram`), and keeping a change made on a safe copy, on a throwaway git
+repository (`npm run test:keep`). They need Node.js 22.6 or later. CI runs them, the type check
+and the release build on Linux and Windows for every push.
+
+See [DESIGN.md](DESIGN.md) for the design and roadmap, and [CONTRIBUTING.md](CONTRIBUTING.md) to
+help.

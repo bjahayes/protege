@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { pathFromProjectId } from "@/lib/config";
+import { projectDir, unknownProject } from "@/lib/project-guard";
 import { getProject, sessionsForCwd } from "@/lib/discovery";
 import { readProjectDocs, scaffoldProject } from "@/lib/docs";
 import { readAssessment } from "@/lib/assessment";
@@ -20,7 +20,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     if (!detail) return NextResponse.json({ error: "Project not found" }, { status: 404 });
     return NextResponse.json(detail);
   }
-  const projectPath = pathFromProjectId(id);
+  const projectPath = await projectDir(id);
+  if (!projectPath) return unknownProject();
   const project = await getProject(projectPath);
   if (!project) {
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
@@ -44,7 +45,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const projectPath = pathFromProjectId(id);
+  const projectPath = await projectDir(id);
+  if (!projectPath) return unknownProject();
   const body = await req.json().catch(() => ({}));
   if (body.action === "scaffold") {
     const project = await getProject(projectPath);
@@ -56,6 +58,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  unregisterProject(pathFromProjectId(id));
+  const dir = await projectDir(id);
+  if (dir) unregisterProject(dir);
   return NextResponse.json({ ok: true });
 }

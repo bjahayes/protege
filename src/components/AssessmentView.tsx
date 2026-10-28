@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/api-client";
 import { useState } from "react";
 import type { Assessment, ComponentInfo } from "@/lib/assessment";
 import { timeAgo } from "@/lib/format";
@@ -49,7 +50,7 @@ export default function AssessmentView({
 
   const savePlan = async () => {
     setSavingPlan(true);
-    await fetch(`/api/projects/${projectId}/plan`, {
+    await apiFetch(`/api/projects/${projectId}/plan`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ markdown: planToMarkdown(a, projectName) }),

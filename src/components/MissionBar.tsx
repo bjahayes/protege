@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/api-client";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import type { Mission } from "@/lib/mission-manager";
@@ -22,7 +23,7 @@ export default function MissionBar({
 
   const load = useCallback(async () => {
     try {
-      const r = await fetch(`/api/projects/${projectId}/mission`, { cache: "no-store" });
+      const r = await apiFetch(`/api/projects/${projectId}/mission`, { cache: "no-store" });
       const j = await r.json();
       setMission(j.mission || null);
     } catch {
@@ -46,7 +47,7 @@ export default function MissionBar({
 
   const start = async () => {
     setBusy(true);
-    await fetch(`/api/projects/${projectId}/mission`, {
+    await apiFetch(`/api/projects/${projectId}/mission`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "start", isolate: isolate && gitRepo, autoResume: true }),
@@ -57,7 +58,7 @@ export default function MissionBar({
 
   const stop = async () => {
     setBusy(true);
-    await fetch(`/api/projects/${projectId}/mission`, {
+    await apiFetch(`/api/projects/${projectId}/mission`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "stop" }),

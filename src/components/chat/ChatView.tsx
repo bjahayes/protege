@@ -4,6 +4,7 @@
 // replies as they are written, each tool call as a compact row you can open, approval cards
 // when Claude needs permission, and a message box that works while Claude is busy.
 
+import { apiFetch } from "@/lib/api-client";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ChatItem } from "@/lib/chat-format";
 import { permissionSentence, toolSummary } from "@/lib/chat-format";
@@ -237,7 +238,7 @@ function ErrorBox({ text }: { text: string }) {
   const update = async () => {
     setUpd({ busy: true });
     try {
-      const r = await (await fetch("/api/claude/update", { method: "POST" })).json();
+      const r = await (await apiFetch("/api/claude/update", { method: "POST" })).json();
       setUpd({
         busy: false,
         result: r.version ? `Claude Code is now version ${r.version}. Send your message again.` : r.message || "The update didn't finish.",
@@ -758,7 +759,7 @@ export default function ChatView({
     setMode(pref("bw.chat.mode", "default"));
     setModel(pref("bw.chat.model", ""));
     setEffort(pref("bw.chat.effort", ""));
-    fetch("/api/chat/models", { cache: "no-store" })
+    apiFetch("/api/chat/models", { cache: "no-store" })
       .then((r) => r.json())
       .then((d) => setModels(d.models || []))
       .catch(() => {});
@@ -848,7 +849,7 @@ export default function ChatView({
     if (!sessionId) return;
     let cancelled = false;
     setLoading(true);
-    fetch(`/api/chat/${sessionId}${cwd ? `?cwd=${encodeURIComponent(cwd)}` : ""}`, { cache: "no-store" })
+    apiFetch(`/api/chat/${sessionId}${cwd ? `?cwd=${encodeURIComponent(cwd)}` : ""}`, { cache: "no-store" })
       .then((r) => r.json())
       .then((d) => {
         if (cancelled) return;
@@ -877,7 +878,7 @@ export default function ChatView({
   useEffect(() => {
     if (!sessionId || hereLive) return;
     const t = setInterval(() => {
-      fetch(`/api/chat/${sessionId}${cwd ? `?cwd=${encodeURIComponent(cwd)}` : ""}`, { cache: "no-store" })
+      apiFetch(`/api/chat/${sessionId}${cwd ? `?cwd=${encodeURIComponent(cwd)}` : ""}`, { cache: "no-store" })
         .then((r) => r.json())
         .then((d) => {
           for (const i of d.items || []) if (i.kind === "user") historyUserTexts.current.add(String(i.text).trim());
@@ -914,7 +915,7 @@ export default function ChatView({
   const act = useCallback((body: any) => {
     const sid = sidRef.current;
     if (!sid) return;
-    fetch(`/api/chat/${sid}/action`, {
+    apiFetch(`/api/chat/${sid}/action`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
@@ -927,7 +928,7 @@ export default function ChatView({
       stick.current = true;
       const { mode, model, effort } = prefsRef.current;
       try {
-        const r = await fetch("/api/chat", {
+        const r = await apiFetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

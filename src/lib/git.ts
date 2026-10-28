@@ -47,6 +47,87 @@ export async function isClean(dir: string): Promise<boolean> {
   }
 }
 
+/** Paths with changes not saved in the project's history (from `git status`). */
+export async function unsavedPaths(dir: string): Promise<string[]> {
+  try {
+    const { stdout } = await git(dir, ["status", "--porcelain", "-z"]);
+    // Entries are "XY path", NUL-separated; a rename adds the old path as its own entry.
+    const parts = stdout.split("\0").filter(Boolean);
+    const out: string[] = [];
+    for (let i = 0; i < parts.length; i++) {
+      const code = parts[i].slice(0, 2);
+      out.push(parts[i].slice(3));
+      if (code[0] === "R" || code[0] === "C") i++;
+    }
+    return out;
+  } catch {
+    return [];
+  }
+}
+
+/** Who a commit is from: the project's own git identity, or "Protégé" if it has none. */
+async function identity(dir: string): Promise<string[]> {
+  try {
+    const { stdout } = await git(dir, ["config", "user.email"]);
+    if (stdout.trim()) return [];
+  } catch {
+    /* not set */
+  }
+  return ["-c", "user.name=Protégé", "-c", "user.email=protege@localhost"];
+}
+
+/**
+ * Save changes in the project's history. With `paths`, only those files; otherwise everything
+ * unsaved. Returns false when there was nothing to save.
+ */
+export async function saveChanges(dir: string, message: string, paths?: string[]): Promise<boolean> {
+  if (paths && !paths.length) return false;
+  await git(dir, paths ? ["add", "-A", "--", ...paths] : ["add", "-A"]);
+  const { stdout } = await git(dir, ["diff", "--cached", "--name-only"]);
+  if (!stdout.trim()) return false;
+  await git(dir, [...(await identity(dir)), "commit", "--no-verify", "-q", "-m", message.slice(0, 200) || "protege changes"]);
+  return true;
+}
+
+const META_DIRS = [".protege", ".buildwork"];
+
+/**
+ * Keep Protégé's own notes (.protege/, and .buildwork/ from before the rename) out of git's
+ * view of the project, via the repository's local ignore list (.git/info/exclude, which is
+ * never committed or shared). Then a note Protégé writes never counts as an unsaved change
+ * that blocks keeping a change. Notes a project already tracks in git are left as they are.
+ */
+export async function excludeNotes(repo: string): Promise<void> {
+  try {
+    const { stdout: tracked } = await git(repo, ["ls-files", "--", ...META_DIRS]);
+    if (tracked.trim()) return;
+    const { stdout: common } = await git(repo, ["rev-parse", "--git-common-dir"]);
+    const gitDir = path.resolve(repo, common.trim());
+    const file = path.join(gitDir, "info", "exclude");
+    const have = fs.existsSync(file) ? fs.readFileSync(file, "utf8") : "";
+    const missing = META_DIRS.map((d) => `/${d}/`).filter((l) => !have.split(/\r?\n/).includes(l));
+    if (!missing.length) return;
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    const sep = have && !have.endsWith("\n") ? "\n" : "";
+    fs.appendFileSync(file, `${sep}# Protégé's notes about this project (not part of the project)\n${missing.join("\n")}\n`);
+  } catch {
+    /* not a git repo, or not writable: nothing to do */
+  }
+}
+
+/** Copy Protégé's notes from one checkout to another (into a safe copy, or back on Keep). */
+export function copyNotes(from: string, to: string): void {
+  for (const d of META_DIRS) {
+    const src = path.join(from, d);
+    if (!fs.existsSync(src)) continue;
+    fs.cpSync(src, path.join(to, d), {
+      recursive: true,
+      force: true,
+      filter: (f) => !f.replace(/\\/g, "/").includes(`/${d}/checkpoints`),
+    });
+  }
+}
+
 const WT_ROOT = path.join(os.tmpdir(), "protege-worktrees");
 
 export interface WorktreeHandle {
@@ -62,7 +143,10 @@ export async function createWorktree(repo: string, jobId: string): Promise<Workt
   const branch = `protege/${jobId.slice(0, 8)}`;
   const worktreePath = path.join(WT_ROOT, jobId);
   fs.mkdirSync(WT_ROOT, { recursive: true });
+  await excludeNotes(repo);
   await git(repo, ["worktree", "add", "-b", branch, worktreePath, base]);
+  // The notes aren't in git, so the new checkout doesn't have them; give it the project's.
+  copyNotes(repo, worktreePath);
   return { worktreePath, branch, baseRef: base };
 }
 
@@ -76,10 +160,7 @@ export async function commitWorktree(worktreePath: string, message: string): Pro
     const { stdout } = await git(worktreePath, ["status", "--porcelain"]);
     if (stdout.trim().length === 0) return false;
     await git(worktreePath, [
-      "-c",
-      "user.name=Protégé",
-      "-c",
-      "user.email=protege@local",
+      ...(await identity(worktreePath)),
       "commit",
       "--no-verify",
       "-m",
@@ -155,16 +236,45 @@ export async function worktreeDiff(handle: {
 export interface ApplyResult {
   ok: boolean;
   message: string;
+  /** "unsaved": the project has unsaved changes; `files` lists them. */
+  code?: "unsaved";
+  files?: string[];
 }
 
 /** Merge the worktree branch into the repo's current branch. Requires a clean main tree. */
-export async function applyWorktree(repo: string, branch: string): Promise<ApplyResult> {
-  if (!(await isGitRepo(repo))) return { ok: false, message: "Not a git repository." };
-  if (!(await isClean(repo))) {
-    return { ok: false, message: "Main working tree has uncommitted changes — commit or stash them first." };
+/**
+ * Keep a change made on a safe copy: merge it into the project. If the project has changes not
+ * yet saved in its history, nothing happens unless `saveFirst`, which saves them (exactly as
+ * they are) before keeping the change. `worktreePath` brings the safe copy's notes back too.
+ */
+export async function applyWorktree(
+  repo: string,
+  branch: string,
+  opts: { worktreePath?: string; saveFirst?: boolean } = {}
+): Promise<ApplyResult> {
+  if (!(await isGitRepo(repo))) return { ok: false, message: "This project isn't set up for safe copies." };
+  await excludeNotes(repo);
+  const unsaved = await unsavedPaths(repo);
+  if (unsaved.length) {
+    if (!opts.saveFirst) {
+      return {
+        ok: false,
+        code: "unsaved",
+        files: unsaved,
+        message:
+          "This project has changes that aren't saved in its history yet, so this change can't be added on top safely. " +
+          "Protégé can save them first, exactly as they are, and then keep this change.",
+      };
+    }
+    try {
+      await saveChanges(repo, "Saved by Protégé before keeping a change");
+    } catch (e: any) {
+      return { ok: false, message: `Couldn't save the project's changes first: ${String(e?.stderr || e?.message || e).split("\n")[0]}` };
+    }
   }
   try {
-    const { stdout } = await git(repo, ["merge", "--no-edit", branch]);
+    const { stdout } = await git(repo, [...(await identity(repo)), "merge", "--no-edit", branch]);
+    if (opts.worktreePath && fs.existsSync(opts.worktreePath)) copyNotes(opts.worktreePath, repo);
     return { ok: true, message: stdout.trim() || `Merged ${branch}.` };
   } catch (e: any) {
     const msg = String(e?.stderr || e?.stdout || e?.message || "merge failed");
@@ -186,7 +296,7 @@ export async function revertJobChange(repo: string, baseRef?: string, branch?: s
     return { ok: false, message: "There are unsaved changes in the project — deal with those first." };
   }
   try {
-    await git(repo, ["revert", "--no-edit", `${baseRef}..${branch}`]);
+    await git(repo, [...(await identity(repo)), "revert", "--no-edit", `${baseRef}..${branch}`]);
     return { ok: true, message: "Change undone." };
   } catch (e: any) {
     try {

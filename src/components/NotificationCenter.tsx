@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/api-client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Job } from "@/lib/types";
 
@@ -61,7 +62,7 @@ export default function NotificationCenter() {
 
     const poll = async () => {
       try {
-        const r = await fetch("/api/jobs", { cache: "no-store" });
+        const r = await apiFetch("/api/jobs", { cache: "no-store" });
         const j = await r.json();
         const jobs: Job[] = [...(j.live || []), ...(j.jobs || [])];
         const seen = new Set<string>();

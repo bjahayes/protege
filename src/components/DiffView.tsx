@@ -1,5 +1,7 @@
 "use client";
 
+import { apiFetch } from "@/lib/api-client";
+import UnsavedNotice from "./UnsavedNotice";
 import { useEffect, useState } from "react";
 import type { JobDiff, DiffFile } from "@/lib/types";
 import MarkdownView from "./MarkdownView";
@@ -17,13 +19,14 @@ export default function DiffView({
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<"" | "apply" | "discard">("");
   const [msg, setMsg] = useState<string | null>(null);
+  const [unsaved, setUnsaved] = useState<{ message: string; files?: string[] } | null>(null);
   const [state, setState] = useState(worktreeState);
   const [oracle, setOracle] = useState<{ loading: boolean; text: string } | null>(null);
   const [checks, setChecks] = useState<{ loading: boolean; result?: any } | null>(null);
 
   const load = () => {
     setLoading(true);
-    fetch(`/api/jobs/${jobId}/diff`, { cache: "no-store" })
+    apiFetch(`/api/jobs/${jobId}/diff`, { cache: "no-store" })
       .then((r) => r.json())
       .then((j) => setDiff(j.diff))
       .catch(() => setDiff(null))
@@ -32,23 +35,25 @@ export default function DiffView({
 
   useEffect(load, [jobId]);
 
-  const apply = async () => {
+  const apply = async (saveFirst = false) => {
     setBusy("apply");
     setMsg(null);
-    const r = await fetch(`/api/jobs/${jobId}/apply`, { method: "POST" });
-    const j = await r.json();
-    setMsg(j.message);
+    const r = await apiFetch(`/api/jobs/${jobId}/apply`, { method: "POST", body: JSON.stringify({ saveFirst }) });
+    const j = await r.json().catch(() => ({ ok: false, message: "Something went wrong applying the change." }));
     if (j.ok) {
+      setUnsaved(null);
+      setMsg(j.message);
       setState("applied");
       onChanged?.();
-    }
+    } else if (j.code === "unsaved") setUnsaved({ message: j.message, files: j.files });
+    else setMsg(j.message);
     setBusy("");
   };
 
   const runOracle = async () => {
     setOracle({ loading: true, text: "" });
     try {
-      const r = await fetch(`/api/jobs/${jobId}/oracle`, { method: "POST" });
+      const r = await apiFetch(`/api/jobs/${jobId}/oracle`, { method: "POST" });
       const j = await r.json();
       setOracle({ loading: false, text: j.review || j.error || "No review." });
     } catch (e: any) {
@@ -59,7 +64,7 @@ export default function DiffView({
   const runChecks = async () => {
     setChecks({ loading: true });
     try {
-      const r = await fetch(`/api/jobs/${jobId}/verify`, { method: "POST" });
+      const r = await apiFetch(`/api/jobs/${jobId}/verify`, { method: "POST" });
       const j = await r.json();
       setChecks({ loading: false, result: j });
     } catch (e: any) {
@@ -71,7 +76,7 @@ export default function DiffView({
     if (!confirm("Discard this worktree and its branch? The agent's changes will be deleted.")) return;
     setBusy("discard");
     setMsg(null);
-    const r = await fetch(`/api/jobs/${jobId}/discard`, { method: "POST" });
+    const r = await apiFetch(`/api/jobs/${jobId}/discard`, { method: "POST" });
     const j = await r.json();
     setMsg(j.message);
     setState("discarded");
@@ -104,6 +109,7 @@ export default function DiffView({
 
   return (
     <div className="flex flex-col h-full min-h-0">
+      {unsaved && <UnsavedNotice message={unsaved.message} files={unsaved.files} busy={busy === "apply"} onSaveAndKeep={() => apply(true)} />}
       <div className="flex items-center justify-between gap-3 pb-2.5 mb-2.5 border-b border-border">
         <div className="text-xs text-muted">
           <span className="font-mono">{diff.branch}</span> · {diff.files.length} file
@@ -137,7 +143,7 @@ export default function DiffView({
             {busy === "discard" ? "…" : "Discard"}
           </button>
           <button
-            onClick={apply}
+            onClick={() => apply()}
             disabled={!!busy}
             className="px-3 py-1 rounded-lg bg-good/15 border border-good/40 text-good hover:bg-good/25 text-xs font-semibold disabled:opacity-50"
           >

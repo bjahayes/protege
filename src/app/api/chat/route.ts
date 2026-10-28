@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { projectDir, unknownProject } from "@/lib/project-guard";
 import fs from "fs";
 import path from "path";
 import type { PermissionMode } from "@anthropic-ai/claude-agent-sdk";
-import { pathFromProjectId } from "@/lib/config";
 import { attachmentBlocks } from "@/lib/chat-attach";
 import { getChatManager } from "@/lib/chat-manager";
 
@@ -20,7 +20,8 @@ export async function POST(req: NextRequest) {
   const attachments = Array.isArray(body.attachments) ? body.attachments : [];
   if ((!text && !attachments.length) || !projectId)
     return NextResponse.json({ error: "projectId and a message or attachment are required" }, { status: 400 });
-  const projectPath = pathFromProjectId(projectId);
+  const projectPath = await projectDir(projectId);
+  if (!projectPath) return unknownProject();
   if (!fs.existsSync(projectPath)) return NextResponse.json({ error: `Folder not found: ${projectPath}` }, { status: 400 });
 
   const mode = MODES.has(body.permissionMode) ? (body.permissionMode as PermissionMode) : undefined;

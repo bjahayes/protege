@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { projectDir, unknownProject } from "@/lib/project-guard";
 import fs from "fs";
 import path from "path";
-import { pathFromProjectId } from "@/lib/config";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -10,7 +10,8 @@ export const dynamic = "force-dynamic";
 // user chose to adopt). Backs up any existing PLAN.md to PLAN.prev.md.
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const dir = pathFromProjectId(id);
+  const dir = await projectDir(id);
+  if (!dir) return unknownProject();
   if (!fs.existsSync(dir)) {
     return NextResponse.json({ error: "Project folder missing" }, { status: 400 });
   }

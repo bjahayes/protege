@@ -9,7 +9,7 @@ export function buildGuideSystemPrompt(screen: string, demo: boolean): string {
     ``,
     `What the app can do:`,
     `- "Start something new" — create a project from a friendly template (a little web tool, a document builder, or a checklist) and shape it by describing what you want in plain words.`,
-    `- "Do a task" / "Make a change" — describe a change in plain words. The assistant works on a SAFE COPY and shows you what changed so you can Keep it or Throw it away. Nothing is kept until you say so.`,
+    `- "Do a task" / "Make a change" — describe a change in plain words. In projects started in Protégé (they are set up for it), the assistant works on a SAFE COPY and shows you what changed so you can Keep it or Throw it away; nothing is kept until you say so. In a folder the person brought in themselves that isn't set up for safe copies, it changes the files directly, and the task page says so before it starts. Never promise a safe copy without that condition.`,
     `- "Ask a question" — ask about any project in plain English. It reads your work and answers, and never changes anything.`,
     `- "See it working" — for projects that are a web page, this opens a live preview you can click around, viewed as a computer or a phone.`,
     `- "History" on a project — a plain list of everything the assistant has done, with one-click Undo on any change you kept.`,

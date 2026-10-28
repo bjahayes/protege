@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/api-client";
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 
@@ -24,7 +25,7 @@ function guideFor(pathname: string): Guide {
     return {
       title: "Getting something done",
       screen: "the “Do a task” page, where you describe a change for Protégé to make",
-      body: "Two quick steps: pick the project, then tell me what you'd like — in plain words. I work on a safe copy and show you before keeping anything.",
+      body: "Two quick steps: pick the project, then tell me what you'd like — in plain words. In projects you started here I work on a safe copy and show you before keeping anything; the page tells you which applies.",
       asks: ["How do I describe a task well?", "What happens after I click Start?"],
     };
   if (pathname.startsWith("/simple/preview"))
@@ -105,7 +106,7 @@ export default function GuideHelper() {
     setAnswer("");
     setAsking(true);
     try {
-      const res = await fetch("/api/guide", {
+      const res = await apiFetch("/api/guide", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question: q, screen: guide.screen, demo }),

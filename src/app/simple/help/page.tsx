@@ -3,7 +3,7 @@
 const STEPS = [
   { icon: "💬", title: "You ask", body: "Tell Protégé what you'd like, in plain English." },
   { icon: "📖", title: "It reads your work", body: "Protégé looks through the project to understand it." },
-  { icon: "✍️", title: "It does the task", body: "It works on a safe, separate copy — your originals aren't touched." },
+  { icon: "✍️", title: "It does the task", body: "In projects you start here, it works on a safe, separate copy, so your originals aren't touched until you keep the change. In folders you brought in yourself, it changes the files directly, and says so before it starts." },
   { icon: "✓", title: "It checks itself", body: "Where possible, it runs the project's own checks to make sure nothing broke." },
   { icon: "👍", title: "You decide", body: "You see exactly what changed and choose to keep it or throw it away." },
 ];
@@ -46,8 +46,10 @@ export default function SimpleHelp() {
           <div className="text-2xl mb-1.5">✍️</div>
           <div className="font-semibold">Asking for a change</div>
           <p className="text-sm text-muted mt-1 leading-relaxed">
-            Protégé does the work on a separate copy and shows you exactly what changed. Nothing is kept until
-            you press <span className="text-good font-medium">Keep these changes</span>. You can always throw them away.
+            In projects you start in Protégé, it does the work on a separate copy and shows you exactly what changed.
+            Nothing is kept until you press <span className="text-good font-medium">Keep these changes</span>, and you can
+            always throw them away. In a folder you brought in yourself, it changes the files directly; the task page
+            tells you which applies before you start.
           </p>
         </div>
       </section>
@@ -70,7 +72,7 @@ export default function SimpleHelp() {
             },
             {
               q: "Can it break something I can't undo?",
-              a: "When it makes changes, it works on a separate copy and shows you first — nothing is kept until you press “Keep these changes”. And you can undo a change you kept afterwards.",
+              a: "In projects you start in Protégé, it works on a separate copy and shows you first: nothing is kept until you press “Keep these changes”, and you can undo a change you kept afterwards. In a folder you brought in yourself, it changes the files directly, so ask a question first if you're unsure. The task page tells you which applies before you start.",
             },
             {
               q: "How do I know its answers are right?",

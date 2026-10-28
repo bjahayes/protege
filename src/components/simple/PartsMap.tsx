@@ -78,10 +78,18 @@ export default function PartsMap({ assessment, changing }: { assessment: Assessm
         };
       });
       const end = Math.max(24, gapFor(L.end));
+      // Spacing only ever grows while the width stays about the same (a scroll bar coming and
+      // going is not a new width), so the layout can't loop: each gap is bounded, and every
+      // change makes it larger. A real resize starts again from the ideal spacing.
       setSpace((sp) => {
-        const baseSpread = sp.width === width ? sp.spread : 0;
-        const spread = out.crowded ? Math.min(3, baseSpread + 1) : baseSpread;
-        const next = { bands, end, spread, width };
+        const sameWidth = Math.abs(sp.width - width) <= 40;
+        const prev = sameWidth ? sp : { bands: [], end: 0, spread: 0, width };
+        const spread = Math.min(3, out.crowded ? prev.spread + 1 : prev.spread);
+        const merged = bands.map((b, i) => {
+          const o = prev.bands[i];
+          return o ? { gap: Math.max(o.gap, b.gap), head: Math.max(o.head, b.head), row: Math.max(o.row, b.row) } : b;
+        });
+        const next = { bands: merged, end: Math.max(prev.end, end), spread, width: sameWidth ? sp.width : width };
         return JSON.stringify(next) === JSON.stringify(sp) ? sp : next;
       });
       // Measured, not eyeballed: anything an arrow or label does wrong is counted here.
@@ -106,10 +114,12 @@ export default function PartsMap({ assessment, changing }: { assessment: Assessm
   const when = assessment.generatedAt ? new Date(assessment.generatedAt).toLocaleDateString() : null;
 
   return (
-    <figure className="m-0">
+    <figure className="m-0 overflow-x-auto">
       <div
         ref={box}
-        className="relative flex flex-col pt-1"
+        // Below this width the cards can't fit side by side with room for arrows; the panel
+        // scrolls sideways instead of squeezing them.
+        className="relative flex flex-col pt-1 min-w-[400px]"
         style={{ paddingBottom: space.end, paddingLeft: 28 + space.spread * 8, paddingRight: 28 + space.spread * 8 }}
         role="group"
         aria-label="Parts of this project and how they connect"

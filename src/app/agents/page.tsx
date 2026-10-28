@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/api-client";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import type { Job } from "@/lib/types";
@@ -18,7 +19,7 @@ export default function AgentsPage() {
   const [fStatus, setFStatus] = useState("all");
 
   const load = useCallback(async () => {
-    const r = await fetch("/api/jobs", { cache: "no-store" });
+    const r = await apiFetch("/api/jobs", { cache: "no-store" });
     const j = await r.json();
     setLive(j.live || []);
     setRecent(j.jobs || []);

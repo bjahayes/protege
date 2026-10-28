@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { projectDir, unknownProject } from "@/lib/project-guard";
 import fs from "fs";
 import path from "path";
 import { listSessions } from "@anthropic-ai/claude-agent-sdk";
-import { isNoisePath, projectIdFromPath, pathFromProjectId } from "@/lib/config";
+import { isNoisePath, projectIdFromPath } from "@/lib/config";
 import { getChatManager } from "@/lib/chat-manager";
 import { getDb } from "@/lib/store";
 import { ATTACHED_PREFIX } from "@/lib/chat-format";
@@ -33,7 +34,9 @@ export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams;
   const projectId = sp.get("projectId");
   const limit = Math.min(500, Math.max(10, parseInt(sp.get("limit") || "200", 10)));
-  const want = projectId ? norm(pathFromProjectId(projectId)) : null;
+  const dir = projectId ? await projectDir(projectId) : null;
+  if (projectId && !dir) return NextResponse.json({ sessions: [] });
+  const want = dir ? norm(dir) : null;
 
   let sessions: any[] = [];
   try {

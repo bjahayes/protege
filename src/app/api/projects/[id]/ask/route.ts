@@ -1,9 +1,9 @@
 import { NextRequest } from "next/server";
+import { projectDir, unknownProject } from "@/lib/project-guard";
 import fs from "fs";
 import { query } from "@/lib/engine";
-import { pathFromProjectId } from "@/lib/config";
 import { buildAskContext, buildAskSystemPrompt } from "@/lib/ask";
-import { isDemoId, materializeDemo } from "@/lib/demo";
+import { isDemoId } from "@/lib/demo";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,7 +22,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const sessionId: string | undefined = body.sessionId || undefined;
 
   // Demo projects are real folders on disk, so the assistant genuinely reads them.
-  const dir = isDemoId(id) ? materializeDemo(id) : pathFromProjectId(id);
+  const dir = await projectDir(id);
+  if (!dir) return unknownProject();
   if (!fs.existsSync(dir)) {
     return new Response("Project folder missing", { status: 400 });
   }

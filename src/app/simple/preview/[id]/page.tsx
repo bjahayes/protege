@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/api-client";
 import { useEffect, useState, use } from "react";
 import Link from "next/link";
 
@@ -9,9 +10,18 @@ export default function SimplePreview({ params }: { params: Promise<{ id: string
   const [hasPreview, setHasPreview] = useState<boolean | null>(null);
   const [nonce, setNonce] = useState(0);
   const [device, setDevice] = useState<"desktop" | "phone">("desktop");
+  // Previews come from their own origin (a separate small server), never Protégé's own.
+  const [origin, setOrigin] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`/api/projects/${id}`, { cache: "no-store" })
+    apiFetch("/api/preview-origin", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((j) => setOrigin(j.origin || null))
+      .catch(() => setOrigin(null));
+  }, []);
+
+  useEffect(() => {
+    apiFetch(`/api/projects/${id}`, { cache: "no-store" })
       .then((r) => r.json())
       .then((j) => {
         setName(j.project?.name || "Preview");
@@ -20,7 +30,8 @@ export default function SimplePreview({ params }: { params: Promise<{ id: string
       .catch(() => setHasPreview(false));
   }, [id]);
 
-  const src = `/api/preview/${id}/?v=${nonce}`;
+  const base = origin ? `${origin}/${encodeURIComponent(id)}/` : "";
+  const src = `${base}?v=${nonce}`;
 
   return (
     <div className="flex flex-col h-full">
@@ -55,7 +66,7 @@ export default function SimplePreview({ params }: { params: Promise<{ id: string
           ↻ Refresh
         </button>
         <a
-          href={`/api/preview/${id}/`}
+          href={base || undefined}
           target="_blank"
           rel="noreferrer"
           className="text-xs px-2.5 py-1.5 rounded-lg border border-border text-muted hover:text-text hover:border-accent/40"
@@ -70,14 +81,14 @@ export default function SimplePreview({ params }: { params: Promise<{ id: string
           <div className="m-auto text-center max-w-sm p-8">
             <div className="text-4xl mb-3">🖼️</div>
             <p className="text-sm text-muted">
-              There&apos;s nothing to show yet. This works for projects that are a web page — once the
+              There&apos;s nothing to show yet. This works for projects that are a web page — once
               Protégé has built one, it&apos;ll appear here.
             </p>
             <Link href={`/simple/project/${id}`} className="inline-block mt-4 text-accent text-sm hover:underline">
               ← Back to the project
             </Link>
           </div>
-        ) : hasPreview === null ? (
+        ) : hasPreview === null || !origin ? (
           <div className="m-auto text-muted text-sm">Loading…</div>
         ) : (
           <iframe
@@ -87,7 +98,7 @@ export default function SimplePreview({ params }: { params: Promise<{ id: string
             className={`bg-white border-0 ${
               device === "phone" ? "w-[390px] h-[780px] my-6 rounded-[28px] shadow-2xl border-8 border-black/80" : "w-full h-full"
             }`}
-            sandbox="allow-scripts allow-forms allow-popups allow-modals allow-same-origin"
+            sandbox="allow-scripts allow-forms allow-popups allow-modals"
           />
         )}
       </div>

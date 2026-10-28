@@ -1,5 +1,7 @@
 "use client";
 
+import { apiFetch } from "@/lib/api-client";
+import UnsavedNotice from "./UnsavedNotice";
 import { useEffect, useRef, useState } from "react";
 import type { Job, JobDiff } from "@/lib/types";
 import { plainActivity, plainError } from "@/lib/plain";
@@ -37,7 +39,7 @@ export default function SimpleRun({
     es.addEventListener("end", () => {
       setEnded(true);
       es.close();
-      fetch(`/api/jobs/${jobId}`, { cache: "no-store" })
+      apiFetch(`/api/jobs/${jobId}`, { cache: "no-store" })
         .then((r) => r.json())
         .then((j) => setJob(j.job))
         .catch(() => {});
@@ -108,28 +110,33 @@ export function SimpleReview({
 }) {
   const [diff, setDiff] = useState<JobDiff | null>(null);
   const [state, setState] = useState<"review" | "applied" | "discarded" | "busy">("review");
+  const [unsaved, setUnsaved] = useState<{ message: string; files?: string[] } | null>(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch(`/api/jobs/${jobId}/diff`, { cache: "no-store" })
+    apiFetch(`/api/jobs/${jobId}/diff`, { cache: "no-store" })
       .then((r) => r.json())
       .then((j) => setDiff(j.diff))
       .catch(() => setDiff(null));
   }, [jobId]);
 
-  const apply = async () => {
+  const apply = async (saveFirst = false) => {
     setState("busy");
-    const r = await fetch(`/api/jobs/${jobId}/apply`, { method: "POST" });
-    const j = await r.json();
+    setError("");
+    const r = await apiFetch(`/api/jobs/${jobId}/apply`, { method: "POST", body: JSON.stringify({ saveFirst }) });
+    const j = await r.json().catch(() => ({ ok: false, message: "Something went wrong keeping the change." }));
     setState(j.ok ? "applied" : "review");
     if (j.ok) {
+      setUnsaved(null);
       onApplied?.();
       onFinished?.();
-    }
+    } else if (j.code === "unsaved") setUnsaved({ message: j.message, files: j.files });
+    else setError(j.message || "The change couldn't be kept.");
   };
   const discard = async () => {
     if (!confirm("Throw away these changes? This can't be undone.")) return;
     setState("busy");
-    await fetch(`/api/jobs/${jobId}/discard`, { method: "POST" });
+    await apiFetch(`/api/jobs/${jobId}/discard`, { method: "POST" });
     setState("discarded");
     onFinished?.();
   };
@@ -140,7 +147,7 @@ export function SimpleReview({
     return <div className="rounded-2xl border border-border bg-panel p-6 text-muted text-sm">The changes were thrown away — nothing was kept.</div>;
 
   // Hide internal metadata (the checklist file etc.) — show only real content changes.
-  const files = (diff?.files || []).filter((f) => !/^\.(protege|protege)\//.test(f.path.replace(/\\/g, "/")));
+  const files = (diff?.files || []).filter((f) => !/^\.(protege|buildwork)\//.test(f.path.replace(/\\/g, "/")));
   return (
     <div className="rounded-2xl border border-border bg-panel p-6">
       <div className="text-base font-medium mb-1">Protégé made some changes</div>
@@ -163,9 +170,11 @@ export function SimpleReview({
               </div>
             ))}
           </div>
+          {unsaved && <UnsavedNotice message={unsaved.message} files={unsaved.files} busy={state === "busy"} onSaveAndKeep={() => apply(true)} />}
+          {error && <p className="text-sm text-bad mb-3">{error}</p>}
           <div className="flex items-center gap-3">
             <button
-              onClick={apply}
+              onClick={() => apply()}
               disabled={state === "busy"}
               className="px-4 py-2.5 rounded-xl bg-good/15 border border-good/40 text-good hover:bg-good/25 text-sm font-semibold disabled:opacity-50"
             >

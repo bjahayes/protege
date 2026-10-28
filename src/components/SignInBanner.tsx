@@ -5,6 +5,7 @@
 // page opens in the browser, and any code it shows is pasted into that window, straight into
 // Claude Code. The banner goes away once Claude Code reports it is signed in.
 
+import { apiFetch } from "@/lib/api-client";
 import { useCallback, useEffect, useState } from "react";
 
 interface Status {
@@ -25,7 +26,7 @@ export default function SignInBanner() {
 
   const load = useCallback(async (refresh = false) => {
     try {
-      const r = await fetch(`/api/claude/status${refresh ? "?refresh=1" : ""}`, { cache: "no-store" });
+      const r = await apiFetch(`/api/claude/status${refresh ? "?refresh=1" : ""}`, { cache: "no-store" });
       setS(await r.json());
     } catch {
       /* leave as is */
@@ -34,7 +35,7 @@ export default function SignInBanner() {
 
   useEffect(() => {
     load();
-    fetch("/api/claude/login", { cache: "no-store" })
+    apiFetch("/api/claude/login", { cache: "no-store" })
       .then((r) => r.json())
       .then((l) => l.status === "waiting" && setLogin(l))
       .catch(() => {});
@@ -52,7 +53,7 @@ export default function SignInBanner() {
     if (login.status !== "waiting") return;
     const t = setInterval(async () => {
       try {
-        const l: Login = await (await fetch("/api/claude/login", { cache: "no-store" })).json();
+        const l: Login = await (await apiFetch("/api/claude/login", { cache: "no-store" })).json();
         setLogin(l);
         if (l.status === "done") load(true);
       } catch {
@@ -66,7 +67,7 @@ export default function SignInBanner() {
     setBusy(true);
     try {
       const l: Login = await (
-        await fetch("/api/claude/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "start" }) })
+        await apiFetch("/api/claude/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "start" }) })
       ).json();
       setLogin(l);
     } catch {

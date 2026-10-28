@@ -10,6 +10,10 @@ import {
   applyWorktree,
   removeWorktree,
   revertJobChange,
+  isGitRepo,
+  unsavedPaths,
+  saveChanges,
+  excludeNotes,
 } from "./git";
 import { buildLaunchContext } from "./ask";
 import { detectVerifyCommand, runVerifyCommand, persistChecks } from "./verify";
@@ -156,6 +160,29 @@ function activityLabel(e: JobEvent): string {
 class JobManager {
   private live = new Map<string, LiveJob>();
   private doneFired = new Set<string>();
+  /** Follow-up runs (auto-continue, auto-fix) waiting to start, by the job that scheduled them. */
+  private pendingFollowUps = new Map<string, ReturnType<typeof setTimeout>>();
+
+  private get followUps() {
+    // An instance kept across a hot reload may predate this field.
+    if (!this.pendingFollowUps) this.pendingFollowUps = new Map();
+    return this.pendingFollowUps;
+  }
+
+  /** Start a follow-up run shortly, unless the job that asked for it is stopped first. */
+  private scheduleFollowUp(parent: LiveJob, opts: LaunchOptions) {
+    if (parent.status === "stopped" || parent.abort.signal.aborted) return;
+    const t = setTimeout(() => {
+      this.followUps.delete(parent.id);
+      if (parent.status === "stopped" || parent.abort.signal.aborted) return;
+      try {
+        this.launch(opts);
+      } catch {
+        /* ignore */
+      }
+    }, 600);
+    this.followUps.set(parent.id, t);
+  }
 
   constructor() {
     this.reconcile();
@@ -281,12 +308,24 @@ class JobManager {
   }
 
   async stopAll(): Promise<number> {
+    // Nothing scheduled may start after Stop all.
+    for (const t of this.followUps.values()) clearTimeout(t);
+    this.followUps.clear();
     const ids = [...this.live.values()].filter((j) => LIVE_STATUSES.includes(j.status)).map((j) => j.id);
     for (const id of ids) await this.stop(id);
     return ids.length;
   }
 
   async stop(id: string): Promise<boolean> {
+    // A follow-up this job scheduled must not start, and any it already started stop too.
+    const t = this.followUps.get(id);
+    if (t) {
+      clearTimeout(t);
+      this.followUps.delete(id);
+    }
+    for (const child of [...this.live.values()]) {
+      if (child.parentJobId === id && LIVE_STATUSES.includes(child.status)) await this.stop(child.id);
+    }
     const l = this.live.get(id);
     if (!l) return false;
     try {
@@ -345,6 +384,13 @@ class JobManager {
     this.emit(job, "status", { status: "starting" });
 
     let cwd = opts.projectPath;
+    // A run straight in the project (no safe copy) saves what it changed to the project's
+    // history afterwards, so a later Keep isn't blocked by its edits.
+    let direct: { before: Set<string> } | null = null;
+    if (!opts.worktree && !opts.isolate && opts.kind !== "assess" && (await isGitRepo(opts.projectPath))) {
+      await excludeNotes(opts.projectPath);
+      direct = { before: new Set(await unsavedPaths(opts.projectPath)) };
+    }
     if (opts.worktree) {
       // Continuation reusing an existing worktree — don't create a new one.
       job.worktreePath = opts.worktree.path;
@@ -415,6 +461,7 @@ class JobManager {
       this.emit(job, "status", { status: job.status });
     }
     await this.finalizeWorktree(job);
+    if (direct) await this.saveDirectRun(job, direct.before);
     this.persist(job);
     await this.maybeAutoVerify(job);
     this.fireDone(job);
@@ -422,7 +469,21 @@ class JobManager {
 
   // After an isolated run, optionally run the project's checks; on failure and if
   // auto-fix is on and under the cap, spawn a continuation to fix them (a loop).
+  /** Save the files a direct run changed (only those: anything already unsaved is left alone). */
+  private async saveDirectRun(job: LiveJob, before: Set<string>) {
+    try {
+      const changed = (await unsavedPaths(job.projectPath)).filter((p) => !before.has(p));
+      if (!changed.length) return;
+      const saved = await saveChanges(job.projectPath, `protege: ${job.prompt.split("\n")[0]}`, changed);
+      if (saved) this.emit(job, "system", { savedToHistory: changed.length });
+    } catch (e: any) {
+      this.emit(job, "system", { saveFailed: String(e?.message || e).slice(0, 300) });
+    }
+  }
+
   private async maybeAutoVerify(job: LiveJob) {
+    // A stopped job's work is unfinished; don't check it or start fixing it.
+    if (job.status === "stopped" || job.abort.signal.aborted) return;
     const o = job.launchOpts;
     if (!o.autoVerify || job.worktreeState !== "active" || !job.worktreePath) return;
     const cmd = detectVerifyCommand(job.worktreePath);
@@ -448,13 +509,7 @@ class JobManager {
         parentJobId: job.id,
         onDone: undefined, // fix passes are their own jobs; don't double-fire mission hooks
       };
-      setTimeout(() => {
-        try {
-          this.launch(contOpts);
-        } catch {
-          /* ignore */
-        }
-      }, 600);
+      this.scheduleFollowUp(job, contOpts);
     }
   }
 
@@ -480,11 +535,11 @@ class JobManager {
     return worktreeDiff({ worktreePath: job.worktreePath, branch: job.branch, baseRef: job.baseRef });
   }
 
-  async applyJob(id: string): Promise<{ ok: boolean; message: string }> {
+  async applyJob(id: string, opts: { saveFirst?: boolean } = {}) {
     const job = this.get(id);
     if (!job || !job.branch) return { ok: false, message: "No worktree branch to apply." };
     if (job.worktreeState === "applied") return { ok: true, message: "Already applied." };
-    const res = await applyWorktree(job.projectPath, job.branch);
+    const res = await applyWorktree(job.projectPath, job.branch, { worktreePath: job.worktreePath, saveFirst: opts.saveFirst });
     if (res.ok) {
       this.updateWorktreeState(id, "applied");
       // Clean up the worktree checkout but keep the (now-merged) branch.
@@ -615,6 +670,7 @@ class JobManager {
     const max = o.maxAutoResumes ?? 3;
     const resumable = subtype === "error_max_turns" || subtype === "error_max_budget_usd";
     if (!o.autoResume || !resumable || !job.sessionId || count >= max) return;
+    if (job.status === "stopped" || job.abort.signal.aborted) return;
 
     this.emit(job, "auto_continue", { attempt: count + 1, of: max });
     const contOpts: LaunchOptions = {
@@ -629,13 +685,7 @@ class JobManager {
         ? { path: job.worktreePath, branch: job.branch, baseRef: job.baseRef }
         : undefined,
     };
-    setTimeout(() => {
-      try {
-        this.launch(contOpts);
-      } catch {
-        /* ignore */
-      }
-    }, 600);
+    this.scheduleFollowUp(job, contOpts);
   }
 
   private emit(job: LiveJob, type: string, payload: any) {
@@ -711,5 +761,8 @@ function safeParse(s: string) {
 const g = globalThis as unknown as { __bwJobManager?: JobManager };
 export function getJobManager(): JobManager {
   if (!g.__bwJobManager) g.__bwJobManager = new JobManager();
+  // After a hot reload in development the kept instance belongs to the old class; give it the
+  // new methods without dropping the jobs it is running.
+  else if (!(g.__bwJobManager instanceof JobManager)) Object.setPrototypeOf(g.__bwJobManager, JobManager.prototype);
   return g.__bwJobManager;
 }

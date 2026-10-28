@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { projectDir, unknownProject } from "@/lib/project-guard";
 import fs from "fs";
-import { pathFromProjectId } from "@/lib/config";
 import { getProject } from "@/lib/discovery";
 import { getJobManager } from "@/lib/job-manager";
 import { buildPlainSummaryPrompt, readPlainSummary } from "@/lib/plain-summary";
@@ -10,12 +10,15 @@ export const dynamic = "force-dynamic";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  return NextResponse.json({ summary: readPlainSummary(pathFromProjectId(id)) });
+  const dir = await projectDir(id);
+  if (!dir) return unknownProject();
+  return NextResponse.json({ summary: readPlainSummary(dir) });
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const dir = pathFromProjectId(id);
+  const dir = await projectDir(id);
+  if (!dir) return unknownProject();
   if (!fs.existsSync(dir)) return NextResponse.json({ error: "Project folder missing" }, { status: 400 });
   const body = await req.json().catch(() => ({}));
   const project = await getProject(dir);

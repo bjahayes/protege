@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/api-client";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import type { ProjectSummary } from "@/lib/types";
@@ -24,7 +25,7 @@ export default function SimpleHome() {
 
   const load = useCallback(async () => {
     try {
-      const r = await fetch("/api/projects", { cache: "no-store" });
+      const r = await apiFetch("/api/projects", { cache: "no-store" });
       const j = await r.json();
       setProjects((j.projects || []).filter((p: ProjectSummary) => p.exists));
     } catch {
@@ -99,7 +100,7 @@ export default function SimpleHome() {
           <div className="text-3xl mb-2">✍️</div>
           <div className="text-lg font-semibold text-accent">Get Protégé to do something</div>
           <div className="text-sm text-muted mt-0.5">
-            Describe a task in plain words. It does the work on a safe copy and shows you before keeping anything.
+            Describe a task in plain words. In projects you start here, it works on a safe copy and shows you before keeping anything.
           </div>
         </Link>
         <Link

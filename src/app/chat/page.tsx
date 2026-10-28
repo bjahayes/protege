@@ -4,6 +4,7 @@
 // Claude Code conversation on this computer (terminal, IDE, desktop and Protégé alike);
 // open one to read it and carry on, or start a new chat in any project folder.
 
+import { apiFetch } from "@/lib/api-client";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import ChatView from "@/components/chat/ChatView";
@@ -45,7 +46,7 @@ function ChatPage() {
   const [startedIn, setStartedIn] = useState<Record<string, ProjectRow>>({});
 
   const loadSessions = useCallback(() => {
-    fetch(`/api/chat/sessions${filter ? `?projectId=${filter}` : ""}`, { cache: "no-store" })
+    apiFetch(`/api/chat/sessions${filter ? `?projectId=${filter}` : ""}`, { cache: "no-store" })
       .then((r) => r.json())
       .then((d) => setSessions(d.sessions || []))
       .catch(() => {})
@@ -59,7 +60,7 @@ function ChatPage() {
   }, [loadSessions]);
 
   useEffect(() => {
-    fetch("/api/projects", { cache: "no-store" })
+    apiFetch("/api/projects", { cache: "no-store" })
       .then((r) => r.json())
       .then((d) =>
         setProjects(

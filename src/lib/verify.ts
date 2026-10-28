@@ -46,8 +46,9 @@ export function runVerifyCommand(command: string, cwd: string): Promise<{ exitCo
   });
 }
 
-export async function verifyDir(dir: string, override?: string): Promise<VerifyResult> {
-  const detected = override ? { command: override, label: override } : detectVerifyCommand(dir);
+/** Run the project's own check (its test or build command, as detected). Takes no command. */
+export async function verifyDir(dir: string): Promise<VerifyResult> {
+  const detected = detectVerifyCommand(dir);
   if (!detected) {
     return { available: false, reason: "No test/build command detected (no package.json test script, pytest, Makefile, etc.)." };
   }

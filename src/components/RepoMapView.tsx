@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/api-client";
 import { useEffect, useState } from "react";
 import type { RepoMap, RepoFile } from "@/lib/repomap";
 
@@ -19,7 +20,7 @@ export default function RepoMapView({ projectId }: { projectId: string }) {
 
   useEffect(() => {
     setLoading(true);
-    fetch(`/api/projects/${projectId}/repomap`, { cache: "no-store" })
+    apiFetch(`/api/projects/${projectId}/repomap`, { cache: "no-store" })
       .then((r) => r.json())
       .then((j) => (j.error ? setErr(j.error) : setMap(j.map)))
       .catch((e) => setErr(String(e)))

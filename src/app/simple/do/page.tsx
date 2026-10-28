@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/api-client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { ProjectSummary } from "@/lib/types";
@@ -26,7 +27,7 @@ export default function SimpleDo() {
   const [suggestions, setSuggestions] = useState<Suggestion[] | null>(null);
 
   useEffect(() => {
-    fetch("/api/projects", { cache: "no-store" })
+    apiFetch("/api/projects", { cache: "no-store" })
       .then((r) => r.json())
       .then((j) => {
         const ps: ProjectSummary[] = (j.projects || []).filter((p: ProjectSummary) => p.exists);
@@ -45,13 +46,13 @@ export default function SimpleDo() {
     setPicked(p);
     setSuggestions(null);
     try {
-      const r = await fetch(`/api/projects/${p.id}`, { cache: "no-store" });
+      const r = await apiFetch(`/api/projects/${p.id}`, { cache: "no-store" });
       const j = await r.json();
       setGitRepo(!!j.gitRepo);
     } catch {
       setGitRepo(false);
     }
-    fetch(`/api/projects/${p.id}/suggestions`, { cache: "no-store" })
+    apiFetch(`/api/projects/${p.id}/suggestions`, { cache: "no-store" })
       .then((r) => r.json())
       .then((j) => setSuggestions(j.suggestions || []))
       .catch(() => setSuggestions([]));
@@ -60,7 +61,7 @@ export default function SimpleDo() {
   const start = async () => {
     if (!picked || !task.trim()) return;
     setBusy(true);
-    const r = await fetch("/api/jobs", {
+    const r = await apiFetch("/api/jobs", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

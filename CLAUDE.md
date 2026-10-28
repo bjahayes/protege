@@ -6,8 +6,10 @@ via the Claude Agent SDK.
 
 ## Build & run
 - Install: `npm install`
-- Dev: `npm run dev` → http://localhost:4317 (use 127.0.0.1 if localhost is flaky on Windows)
+- Dev: `npm run dev` → http://127.0.0.1:4317 (previews on 4318). Always start through the npm scripts
+  (`scripts/serve.mjs`): they create the per-install access key the request checks need.
 - Typecheck: `npx tsc --noEmit`
+- Tests (no model calls): `npm test` (arrow layout + Keep on a throwaway repo)
 - Build: `npm run build`
 
 ## Stack
@@ -16,6 +18,14 @@ via the Claude Agent SDK.
   no ANTHROPIC_API_KEY required. `apiKeySource: 'none'` in the init message confirms this.
 
 ## Architecture
+- Security: `src/middleware.ts` checks every request (Host is 127.0.0.1/localhost, Sec-Fetch-Site
+  same-origin, JSON for non-GET, Origin, per-install key from a cookie or `X-Protege-Token`). Pages call
+  the API only through `apiFetch` (`src/lib/api-client.ts`). Routes turn project ids into folders only
+  through `projectDir` (`src/lib/project-guard.ts`, known projects only). Previews come from
+  `src/lib/preview-server.ts` on their own port, started in `src/instrumentation.ts`.
+- Git: `src/lib/git.ts`. Protégé's notes (`.protege/`, old `.buildwork/`) are in `.git/info/exclude`
+  and copied into and back out of safe copies; direct runs save the files they changed; Keep offers
+  "save them first" when the project has unsaved changes.
 - `src/lib/` — server-only modules:
   - `config.ts` — paths, `projectIdFromPath`/`pathFromProjectId` (base64url of the abs path),
     noise filter for temp/scratchpad cwds. **Uses Node `Buffer` — never import in a client component.**

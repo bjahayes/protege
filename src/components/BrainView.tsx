@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/api-client";
 import { useEffect, useState } from "react";
 import MarkdownView from "./MarkdownView";
 import type { BrainNote } from "@/lib/brain";
@@ -17,7 +18,7 @@ export default function BrainView({ projectId }: { projectId: string }) {
 
   useEffect(() => {
     setLoading(true);
-    fetch(`/api/projects/${projectId}/brain`, { cache: "no-store" })
+    apiFetch(`/api/projects/${projectId}/brain`, { cache: "no-store" })
       .then((r) => r.json())
       .then((j) => setBrain(j.brain))
       .catch(() => setBrain(null))
@@ -118,7 +119,7 @@ function NoteRow({ note }: { note: BrainNote }) {
   const toggle = () => {
     setOpen((v) => !v);
     if (!body) {
-      fetch(`/api/brain/note/${encodeURIComponent(note.slug)}`, { cache: "no-store" })
+      apiFetch(`/api/brain/note/${encodeURIComponent(note.slug)}`, { cache: "no-store" })
         .then((r) => r.json())
         .then((j) => setBody(j.note?.body || ""))
         .catch(() => setBody(""));

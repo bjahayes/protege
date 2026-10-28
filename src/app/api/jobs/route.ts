@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { projectDir, unknownProject } from "@/lib/project-guard";
 import fs from "fs";
-import { pathFromProjectId } from "@/lib/config";
 import { getJobManager } from "@/lib/job-manager";
 import { getProject } from "@/lib/discovery";
-import { isDemoId, materializeDemo, demoSummaries } from "@/lib/demo";
+import { isDemoId, demoSummaries } from "@/lib/demo";
 import { readTasks } from "@/lib/docs";
 import { metaRel } from "@/lib/meta";
 import type { PermissionMode } from "@anthropic-ai/claude-agent-sdk";
@@ -45,7 +45,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "projectId and prompt are required" }, { status: 400 });
   }
   const demo = isDemoId(projectId);
-  const projectPath = demo ? materializeDemo(projectId) : pathFromProjectId(projectId);
+  const projectPath = await projectDir(projectId);
+  if (!projectPath) return unknownProject();
   if (!fs.existsSync(projectPath)) {
     return NextResponse.json({ error: `Project path missing: ${projectPath}` }, { status: 400 });
   }
