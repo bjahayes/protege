@@ -639,7 +639,8 @@ class JobManager {
         let outTok = 0;
         const mu = msg.modelUsage ?? {};
         for (const k of Object.keys(mu)) {
-          inTok += mu[k]?.inputTokens ?? 0;
+          // All the input Claude read, cached or not; uncached input alone is a tiny share of a run.
+          inTok += (mu[k]?.inputTokens ?? 0) + (mu[k]?.cacheReadInputTokens ?? 0) + (mu[k]?.cacheCreationInputTokens ?? 0);
           outTok += mu[k]?.outputTokens ?? 0;
         }
         job.inputTokens = inTok || msg.usage?.input_tokens;

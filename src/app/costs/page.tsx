@@ -118,8 +118,8 @@ export default function CostsPage() {
         <section className="mb-8">
           <h2 className="text-sm font-semibold text-muted mb-1">What&apos;s contributing</h2>
           <p className="text-[12px] text-muted mb-2">
-            How much of your usage came from sessions of each kind, as Claude Code counts it for /usage. A session can be more
-            than one kind, so the shares overlap. Only sessions on this computer are counted, not other devices or claude.ai.
+            What Claude Code&apos;s /usage says is using up your limits, from the sessions on this computer (not other devices or
+            claude.ai). Each line is a separate measure, so they don&apos;t add up to 100%: one long session can count toward several.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {plan.day && <Activity title="Last 24 hours" a={plan.day} />}
@@ -278,11 +278,11 @@ function Activity({ title, a }: { title: string; a: UsageActivity }) {
       {a.contributors.length === 0 ? (
         <div className="text-[12.5px] text-muted">Nothing in particular stands out.</div>
       ) : (
-        <ul className="space-y-1.5">
+        <ul className="space-y-2.5">
           {a.contributors.map((c) => (
-            <li key={c.label} className="flex items-center justify-between gap-3 text-[12.5px]">
-              <span className="truncate">{c.label}</span>
-              <span className="text-muted tabular-nums shrink-0">{c.percent}%</span>
+            <li key={c.text} className="text-[12.5px] leading-snug">
+              <div>{c.text}</div>
+              {c.tip && <div className="text-[11.5px] text-muted mt-0.5">{c.tip}</div>}
             </li>
           ))}
         </ul>

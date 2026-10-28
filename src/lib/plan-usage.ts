@@ -22,7 +22,8 @@ export interface UsageActivity {
   requests: number;
   sessions: number;
   /** What is contributing to usage, each with its share as Claude Code reports it. */
-  contributors: { label: string; percent: number }[];
+  /** What is contributing, each as Claude Code's /usage words it, with its tip. They overlap. */
+  contributors: { text: string; tip?: string; percent: number }[];
 }
 
 export interface PlanUsage {
@@ -38,10 +39,28 @@ export interface PlanUsage {
 
 const PLAN_NAMES: Record<string, string> = { pro: "Pro", max: "Max", team: "Team", enterprise: "Enterprise" };
 
-const BEHAVIOURS: Record<string, string> = {
-  long_context: "Long sessions with a lot of context",
-  subagent_heavy: "Sessions that use many subagents",
-  cron: "Scheduled tasks",
+// Claude Code's own wording for each kind of usage, and its tip.
+const BEHAVIOURS: Record<string, { text: (n: number) => string; tip: string }> = {
+  cache_miss: {
+    text: (n) => `${n}% of your usage hit a cache miss of over 100k tokens`,
+    tip: "Uncached input is expensive, and often happens when you message a session that has gone idle. /compact before stepping away keeps the cold start small.",
+  },
+  long_context: {
+    text: (n) => `${n}% of your usage was at over 150k tokens of context`,
+    tip: "Longer sessions cost more even when cached. /compact mid-task, and /clear when switching to a new task.",
+  },
+  subagent_heavy: {
+    text: (n) => `${n}% of your usage came from sessions that use many subagents`,
+    tip: "Each subagent runs its own requests. Be deliberate about starting them, and consider a cheaper model for them.",
+  },
+  high_parallel: {
+    text: (n) => `${n}% of your usage was while 4 or more sessions ran at once`,
+    tip: "All sessions share one limit. If you don't need them all at once, queueing uses it more evenly.",
+  },
+  cron: {
+    text: (n) => `${n}% of your usage came from sessions active for 8 hours or more`,
+    tip: "These are often background or looping sessions. Continuous use adds up quickly, so make sure it's intentional.",
+  },
 };
 
 const words = (key: string) => key.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
@@ -85,11 +104,16 @@ function limitsFrom(r: any): UsageLimit[] {
 function activityFrom(a: any): UsageActivity | null {
   if (!a) return null;
   const contributors = [
-    ...(a.behaviors || []).map((b: any) => ({ label: BEHAVIOURS[b.key] || words(String(b.key)), percent: b.pct })),
-    ...(a.agents || []).map((x: any) => ({ label: `Agent: ${x.name}`, percent: x.pct })),
-    ...(a.skills || []).map((x: any) => ({ label: `Skill: ${x.name}`, percent: x.pct })),
-    ...(a.plugins || []).map((x: any) => ({ label: `Plugin: ${x.name}`, percent: x.pct })),
-    ...(a.mcp_servers || []).map((x: any) => ({ label: `Connector: ${x.name}`, percent: x.pct })),
+    ...(a.behaviors || []).map((b: any) => {
+      const w = BEHAVIOURS[b.key];
+      return w
+        ? { text: w.text(b.pct), tip: w.tip, percent: b.pct }
+        : { text: `${b.pct}% of your usage: ${words(String(b.key)).toLowerCase()}`, percent: b.pct };
+    }),
+    ...(a.agents || []).map((x: any) => ({ text: `${x.pct}% of your usage came from the ${x.name} agent`, percent: x.pct })),
+    ...(a.skills || []).map((x: any) => ({ text: `${x.pct}% of your usage came from the ${x.name} skill`, percent: x.pct })),
+    ...(a.plugins || []).map((x: any) => ({ text: `${x.pct}% of your usage came from the ${x.name} plugin`, percent: x.pct })),
+    ...(a.mcp_servers || []).map((x: any) => ({ text: `${x.pct}% of your usage came from the ${x.name} connector`, percent: x.pct })),
   ].filter((c) => typeof c.percent === "number");
   return { requests: a.request_count ?? 0, sessions: a.session_count ?? 0, contributors };
 }
