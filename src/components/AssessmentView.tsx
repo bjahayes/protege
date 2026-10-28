@@ -123,12 +123,10 @@ export default function AssessmentView({
             <PartsMap assessment={a} />
           </div>
           {a.architecture?.mermaid && (
-            <details className="mt-2">
-              <summary className="text-xs text-muted cursor-pointer hover:text-text select-none">Show as a flowchart</summary>
-              <div className="mt-2">
-                <Mermaid chart={a.architecture.mermaid} />
-              </div>
-            </details>
+            <>
+              <h3 className="text-sm font-semibold text-muted mt-5 mb-2">Flowchart</h3>
+              <Mermaid chart={a.architecture.mermaid} />
+            </>
           )}
         </section>
       )}

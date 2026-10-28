@@ -14,6 +14,7 @@ import AgentStream from "@/components/AgentStream";
 import StatusBadge from "@/components/StatusBadge";
 import AssessmentView from "@/components/AssessmentView";
 import PartsMap from "@/components/simple/PartsMap";
+import Mermaid from "@/components/Mermaid";
 import RepoMapView from "@/components/RepoMapView";
 import BrainView from "@/components/BrainView";
 import { useBrainAvailable } from "@/lib/use-brain";
@@ -295,6 +296,7 @@ function Overview({
           )}
         </div>
       </section>
+
       </div>
 
       <div className="min-w-0 space-y-5">
@@ -327,6 +329,17 @@ function Overview({
 
       {project.exists && <CheckpointsPanel projectId={projectId} onRestore={onReload} />}
       </div>
+
+      {/* Across both columns, so the flowchart shows whole at a readable size. */}
+      {assessment?.architecture?.mermaid ? (
+        <section className="min-w-0 xl:col-span-2">
+          <h2 className="text-sm font-semibold text-muted mb-2">Flowchart</h2>
+          {assessment.architecture.description && (
+            <p className="text-[12.5px] text-muted mb-2 leading-relaxed max-w-prose">{assessment.architecture.description}</p>
+          )}
+          <Mermaid chart={assessment.architecture.mermaid} />
+        </section>
+      ) : null}
     </div>
   );
 }

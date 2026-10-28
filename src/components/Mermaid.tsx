@@ -40,7 +40,10 @@ export default function Mermaid({ chart }: { chart: string }) {
       .then((mermaid) => mermaid.render(id, chart))
       .then(({ svg }: { svg: string }) => {
         if (!cancelled) {
-          setSvg(svg);
+          // Mermaid shrinks the chart to fit its box, which makes the labels unreadably small in a
+          // narrow column. Keep it at its own size and let the box scroll sideways instead.
+          const natural = svg.match(/max-width:\s*([\d.]+)px/)?.[1];
+          setSvg(natural ? svg.replace(/width="100%"/, `width="${natural}"`) : svg);
           setErr(null);
         }
       })
@@ -64,7 +67,9 @@ export default function Mermaid({ chart }: { chart: string }) {
   return (
     <div
       ref={ref}
-      className="my-4 flex justify-center rounded-lg border border-border bg-panel-2/40 p-4 overflow-x-auto"
+      className="my-4 flex rounded-lg border border-border bg-panel-2/40 p-4 overflow-x-auto [&>svg]:shrink-0"
+      // "safe center": centred when it fits, starting at the left edge (so nothing is cut off) when it scrolls.
+      style={{ justifyContent: "safe center" }}
       dangerouslySetInnerHTML={{ __html: svg }}
     />
   );
