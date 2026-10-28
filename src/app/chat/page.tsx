@@ -19,8 +19,6 @@ interface SessionRow {
   lastModified: number;
   gitBranch?: string;
   status: string | null;
-  /** When Protégé last worked in this conversation. */
-  hereAt?: number;
 }
 interface ProjectRow {
   id: string;
@@ -29,6 +27,9 @@ interface ProjectRow {
   lastActivity: number | null;
   exists: boolean;
 }
+
+// The chat open last, in this browser: coming back to Chat with none chosen opens it again.
+const LAST_CHAT = "protege.chat.last";
 
 function ChatPage() {
   const router = useRouter();
@@ -72,7 +73,32 @@ function ChatPage() {
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    if (sid || newFor) {
+      try {
+        localStorage.setItem(LAST_CHAT, sid ? `s=${sid}` : `project=${newFor}`);
+      } catch {}
+      return;
+    }
+    let last: string | null = null;
+    try {
+      last = localStorage.getItem(LAST_CHAT);
+    } catch {}
+    if (last) router.replace(`/chat?${last}`);
+  }, [sid, newFor, router]);
+
   const current = sessions.find((s) => s.sessionId === sid);
+
+  // The remembered chat is gone (deleted, or its folder moved): forget it and show the list.
+  useEffect(() => {
+    if (!loaded || !sid || filter || current || startedIn[sid]) return;
+    try {
+      if (localStorage.getItem(LAST_CHAT) === `s=${sid}`) {
+        localStorage.removeItem(LAST_CHAT);
+        router.replace("/chat");
+      }
+    } catch {}
+  }, [loaded, sid, filter, current, startedIn, router]);
   const project: ProjectRow | undefined = current
     ? { id: current.projectId, name: current.projectName, path: current.cwd, lastActivity: null, exists: true }
     : sid
@@ -163,8 +189,6 @@ function ChatPage() {
             projectName={project.name}
             cwd={project.path}
             title={current?.title}
-            lastModified={current?.lastModified}
-            hereAt={current?.hereAt}
             onStarted={(id) => {
               setStartedIn((m) => ({ ...m, [id]: project }));
               router.replace(`/chat?s=${id}`);

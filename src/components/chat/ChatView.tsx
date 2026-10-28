@@ -23,6 +23,9 @@ interface LiveState {
   permissionMode: string;
   effort?: string;
   costUsd?: number;
+  /** A copy of this conversation, carried on here because it was open in another app. */
+  continuedFrom?: string;
+  continuedBecause?: string;
 }
 
 /** A model as this computer's Claude Code offers it (the same list as Claude desktop's picker). */
@@ -725,8 +728,6 @@ export default function ChatView({
   projectName,
   cwd,
   title,
-  lastModified,
-  hereAt,
   onStarted,
 }: {
   sessionId: string | null;
@@ -734,16 +735,14 @@ export default function ChatView({
   projectName?: string;
   cwd?: string;
   title?: string;
-  /** When the saved conversation last changed (from the conversation list). */
-  lastModified?: number;
-  /** When Protégé itself last worked in this conversation. */
-  hereAt?: number;
   onStarted: (sessionId: string) => void;
 }) {
   const [items, setItems] = useState<ChatItem[]>([]);
   const [partial, setPartial] = useState("");
   const [live, setLive] = useState<LiveState | null>(null);
   const [loading, setLoading] = useState(false);
+  // The other app this conversation is open in right now, if any (Claude desktop, a terminal).
+  const [openIn, setOpenIn] = useState<string | null>(null);
   const [mode, setMode] = useState("default");
   const [model, setModel] = useState("");
   const [effort, setEffort] = useState("");
@@ -853,6 +852,7 @@ export default function ChatView({
       .then((r) => r.json())
       .then((d) => {
         if (cancelled) return;
+        setOpenIn(d.openIn || null);
         for (const i of d.items || []) if (i.kind === "user") historyUserTexts.current.add(String(i.text).trim());
         merge(d.items || [], true);
         if (d.live) {
@@ -881,6 +881,7 @@ export default function ChatView({
       apiFetch(`/api/chat/${sessionId}${cwd ? `?cwd=${encodeURIComponent(cwd)}` : ""}`, { cache: "no-store" })
         .then((r) => r.json())
         .then((d) => {
+          setOpenIn(d.openIn || null);
           for (const i of d.items || []) if (i.kind === "user") historyUserTexts.current.add(String(i.text).trim());
           merge(d.items || [], true);
           if (d.live) {
@@ -892,9 +893,7 @@ export default function ChatView({
     }, 5000);
     return () => clearInterval(t);
   }, [sessionId, cwd, hereLive, merge, connect]);
-  // Changed recently, and after Protégé's own last turn in it: something else is writing to it.
-  const elsewhere =
-    !!sessionId && !loading && !hereLive && !!lastModified && Date.now() - lastModified < 120_000 && lastModified - (hereAt || 0) > 5_000;
+  const elsewhere = !!sessionId && !loading && !hereLive ? openIn : null;
 
   useEffect(() => {
     const el = scroller.current;
@@ -1065,10 +1064,14 @@ export default function ChatView({
         notice={
           elsewhere ? (
             <div className="text-[12px] text-warn mb-2">
-              This conversation changed {Math.max(1, Math.round((Date.now() - (lastModified || 0)) / 1000))}s ago, so it is probably open in
-              another app. A reply here carries on from the same point; to avoid two branches, reply in one place at a time.
+              This conversation is open in {elsewhere}. If you reply here, Protégé carries it on as a copy, so the conversation in{" "}
+              {elsewhere} keeps its whole history and so does this one.
             </div>
-          ) : null
+          ) : live?.continuedFrom ? (
+            <div className="text-[12px] text-muted mb-2">
+              This is a copy of a conversation that was open in {live.continuedBecause || "another app"}. Protégé carried it on here so
+              neither one loses messages; the original is unchanged.
+            </div>          ) : null
         }
         onSend={send}
         onStop={stop}

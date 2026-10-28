@@ -22,9 +22,11 @@ const PROJECT_STARTERS = [
 
 export default function AssistantPage() {
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
-  const [scope, setScope] = useState<Scope>({ type: "brain" });
+  // null until the projects and the brain check are in: without a second brain it starts on a project.
+  const [scope, setScope] = useState<Scope | null>(null);
+  const [asked, setAsked] = useState<string | null>(null);
   const [brainTitles, setBrainTitles] = useState<Record<string, string>>({});
-  const [brainAvailable, setBrainAvailable] = useState(true);
+  const [brainAvailable, setBrainAvailable] = useState<boolean | null>(null);
 
   useEffect(() => {
     apiFetch("/api/projects", { cache: "no-store" })
@@ -34,11 +36,7 @@ export default function AssistantPage() {
         setProjects(ps);
         // deep link: ?project=<id> or ?scope=brain
         const params = new URLSearchParams(window.location.search);
-        const pid = params.get("project");
-        if (pid) {
-          const p = ps.find((x) => x.id === pid);
-          if (p) setScope({ type: "project", id: p.id, name: p.name });
-        }
+        setAsked(params.get("project") || "");
       })
       .catch(() => {});
     apiFetch("/api/brain", { cache: "no-store" })
@@ -50,8 +48,15 @@ export default function AssistantPage() {
         for (const p of j.projects || []) map[p.slug] = p.title || p.slug;
         setBrainTitles(map);
       })
-      .catch(() => {});
+      .catch(() => setBrainAvailable(false));
   }, []);
+
+  useEffect(() => {
+    if (scope || asked === null || brainAvailable === null) return;
+    const p = projects.find((x) => x.id === asked) || (brainAvailable ? null : projects[0]);
+    if (p) setScope({ type: "project", id: p.id, name: p.name });
+    else if (brainAvailable) setScope({ type: "brain" });
+  }, [scope, asked, brainAvailable, projects]);
 
   const linkify = useMemo(
     () => (text: string) =>
@@ -62,9 +67,9 @@ export default function AssistantPage() {
     [brainTitles]
   );
 
-  const isBrain = scope.type === "brain";
-  const endpoint = isBrain ? "/api/brain/ask" : `/api/projects/${(scope as any).id}/ask`;
-  const scopeKey = isBrain ? "brain" : (scope as any).id;
+  const isBrain = scope?.type === "brain";
+  const endpoint = isBrain ? "/api/brain/ask" : `/api/projects/${(scope as any)?.id}/ask`;
+  const scopeKey = !scope ? "" : isBrain ? "brain" : (scope as any).id;
 
   const onScope = (val: string) => {
     if (val === "brain") setScope({ type: "brain" });
@@ -85,9 +90,7 @@ export default function AssistantPage() {
             onChange={(e) => onScope(e.target.value)}
             className="px-2.5 py-1.5 rounded-lg bg-panel border border-border text-sm text-text focus:outline-none focus:border-accent/60 max-w-[260px]"
           >
-            <option value="brain" disabled={!brainAvailable}>
-              🧠 The brain (all projects)
-            </option>
+            {brainAvailable && <option value="brain">🧠 The brain (all projects)</option>}
             {projects.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}
@@ -98,18 +101,26 @@ export default function AssistantPage() {
       </div>
 
       <div className="flex-1 min-h-0 px-6 py-4 max-w-3xl w-full mx-auto">
+        {!scope ? (
+          <p className="text-sm text-muted py-8">
+            {asked !== null && brainAvailable === false && !projects.length
+              ? "There are no projects to ask about yet. Open a folder with Claude Code, or start one from the Dashboard."
+              : "Loading…"}
+          </p>
+        ) : (
         <Chat
           key={scopeKey}
           endpoint={endpoint}
           intro={
             isBrain
               ? "Answers across all your projects and notes — it reads your second brain and cites the specific notes it used."
-              : `Grounded in ${(scope as any).name}'s code, assessment and brain notes. Read-only — it reads files to answer.`
+              : `Grounded in ${(scope as any).name}'s code${brainAvailable ? ", assessment and brain notes" : " and assessment"}. Read-only — it reads files to answer.`
           }
           starters={isBrain ? BRAIN_STARTERS : PROJECT_STARTERS}
           placeholder={isBrain ? "Ask across everything you've built…" : "Ask about this project…"}
           linkify={isBrain ? linkify : undefined}
         />
+        )}
       </div>
     </div>
   );

@@ -10,6 +10,13 @@ via the Claude Agent SDK.
 - Dev: `npm run dev` shows code changes live but compiles each page on first visit (0.7–8 s); only for
   changing Protégé. Always start through the npm scripts (`scripts/serve.mjs`): they create the
   per-install access key the request checks need. `.claude/launch.json`: `protege` = release, `protege-dev` = dev.
+- **If you are running inside Protégé** (a chat or task Protégé started in this folder), Protégé's server is
+  your parent process: stopping or restarting it, or building into `.next` while it runs, ends your run partway
+  through. Never stop that server or a node process you didn't start, and never run `npm run build` while it's
+  running. To try a change in a browser, build and run a separate copy:
+  `PROTEGE_DIST_DIR=.next-test npx next build`, then in the background
+  `PROTEGE_DIST_DIR=.next-test node scripts/serve.mjs next start -H 127.0.0.1 -p 4327` (previews on 4328); stop it
+  when done. When the real server needs a restart to pick up a change, say so and let the person restart it.
 - Typecheck: `npx tsc --noEmit`
 - Tests (no model calls): `npm test` (arrow layout + Keep on a throwaway repo)
 - Build: `npm run build`

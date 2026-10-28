@@ -4,6 +4,7 @@ import { apiFetch } from "@/lib/api-client";
 import { useEffect, useMemo, useState } from "react";
 import Chat from "@/components/Chat";
 import type { ProjectSummary } from "@/lib/types";
+import { useBrainAvailable } from "@/lib/use-brain";
 
 type Scope = { type: "brain" } | { type: "project"; id: string; name: string };
 
@@ -21,7 +22,11 @@ const PROJECT_STARTERS = [
 
 export default function SimpleAsk() {
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
-  const [scope, setScope] = useState<Scope>({ type: "brain" });
+  // null until the projects and the brain check are in: "everything I've worked on" needs a
+  // second brain, so without one the box starts on a project.
+  const [scope, setScope] = useState<Scope | null>(null);
+  const [asked, setAsked] = useState<string | null>(null);
+  const brain = useBrainAvailable();
   const [brainTitles, setBrainTitles] = useState<Record<string, string>>({});
   const [showTips, setShowTips] = useState(false);
   const [initialQ, setInitialQ] = useState("");
@@ -33,11 +38,7 @@ export default function SimpleAsk() {
         const ps: ProjectSummary[] = (j.projects || []).filter((p: ProjectSummary) => p.exists);
         setProjects(ps);
         const params = new URLSearchParams(window.location.search);
-        const pid = params.get("project");
-        if (pid) {
-          const p = ps.find((x) => x.id === pid);
-          if (p) setScope({ type: "project", id: p.id, name: p.name });
-        }
+        setAsked(params.get("project") || "");
         const q = params.get("q");
         if (q) setInitialQ(q);
       })
@@ -53,6 +54,13 @@ export default function SimpleAsk() {
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    if (scope || asked === null || brain === null) return;
+    const p = projects.find((x) => x.id === asked) || (brain ? null : projects[0]);
+    if (p) setScope({ type: "project", id: p.id, name: p.name });
+    else if (brain) setScope({ type: "brain" });
+  }, [scope, asked, brain, projects]);
+
   const linkify = useMemo(
     () => (text: string) =>
       text.replace(/\[\[([a-z0-9][a-z0-9-]*)\]\]/gi, (m, slug) => {
@@ -62,9 +70,9 @@ export default function SimpleAsk() {
     [brainTitles]
   );
 
-  const isBrain = scope.type === "brain";
-  const scopeKey = isBrain ? "brain" : (scope as any).id;
-  const endpoint = isBrain ? "/api/brain/ask" : `/api/projects/${(scope as any).id}/ask`;
+  const isBrain = scope?.type === "brain";
+  const scopeKey = !scope ? "" : isBrain ? "brain" : (scope as any).id;
+  const endpoint = isBrain ? "/api/brain/ask" : `/api/projects/${(scope as any)?.id}/ask`;
 
   return (
     <div className="flex flex-col h-full">
@@ -85,7 +93,7 @@ export default function SimpleAsk() {
               }
               className="px-3 py-1.5 rounded-lg bg-panel border border-border text-sm text-text focus:outline-none focus:border-accent/60 max-w-[260px]"
             >
-              <option value="brain">everything I&apos;ve worked on</option>
+              {brain && <option value="brain">everything I&apos;ve worked on</option>}
               {projects.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
@@ -111,6 +119,13 @@ export default function SimpleAsk() {
       </div>
 
       <div className="flex-1 min-h-0 px-8 py-4 max-w-3xl w-full mx-auto">
+        {!scope ? (
+          <p className="text-sm text-muted py-8">
+            {asked !== null && brain === false && !projects.length
+              ? "There's nothing to ask about yet. Start something new, or open a project you've worked on with Claude Code, and you can ask about it here."
+              : "Loading…"}
+          </p>
+        ) : (
         <Chat
           key={scopeKey}
           endpoint={endpoint}
@@ -124,6 +139,7 @@ export default function SimpleAsk() {
           initialInput={initialQ}
           linkify={isBrain ? linkify : undefined}
         />
+        )}
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { apiFetch } from "@/lib/api-client";
+import { useBrainAvailable } from "@/lib/use-brain";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import type { ProjectSummary } from "@/lib/types";
@@ -24,6 +25,7 @@ const NAV: Cmd[] = [
 
 export default function CommandBar() {
   const router = useRouter();
+  const brain = useBrainAvailable();
   const [open, setOpen] = useState(false);
   const [help, setHelp] = useState(false);
   const [query, setQuery] = useState("");
@@ -57,7 +59,7 @@ export default function CommandBar() {
     .filter((p) => p.exists)
     .map((p) => ({ id: p.id, label: p.name, hint: p.path, href: `/projects/${p.id}`, group: "Projects" }));
 
-  const all = [...NAV, ...projectCmds];
+  const all = [...NAV.filter((n) => brain || n.id !== "nav-brain"), ...projectCmds];
   const filtered = query
     ? all.filter((c) => (c.label + " " + (c.hint || "")).toLowerCase().includes(query.toLowerCase()))
     : all;
@@ -117,7 +119,7 @@ export default function CommandBar() {
           l: "/live",
           i: "/inbox",
           a: "/agents",
-          b: "/brain",
+          ...(brain ? { b: "/brain" } : {}),
           c: "/costs",
         };
         const href = map[e.key.toLowerCase()];
@@ -135,7 +137,7 @@ export default function CommandBar() {
 
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, filtered, sel, go]);
+  }, [open, filtered, sel, go, brain]);
 
   return (
     <>
@@ -188,7 +190,7 @@ export default function CommandBar() {
               <Row keys="G then L" label="Live agents" />
               <Row keys="G then I" label="Inbox" />
               <Row keys="G then A" label="Agents" />
-              <Row keys="G then B" label="Brain" />
+              {brain && <Row keys="G then B" label="Brain" />}
               <Row keys="G then C" label="Cost & usage" />
               <Row keys="?" label="This help" />
               <Row keys="Esc" label="Close" />

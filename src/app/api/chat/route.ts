@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
   const live = sessionId ? cm.get(sessionId) : undefined;
 
   if (!live) {
-    sessionId = cm.start({ projectPath, projectName: path.basename(projectPath), resume: sessionId, model, permissionMode: mode, effort });
+    sessionId = await cm.open({ projectPath, projectName: path.basename(projectPath), resume: sessionId, model, permissionMode: mode, effort });
   } else {
     if (mode && mode !== live.permissionMode) await cm.setMode(sessionId!, mode);
     if (model !== live.model) await cm.setModel(sessionId!, model);

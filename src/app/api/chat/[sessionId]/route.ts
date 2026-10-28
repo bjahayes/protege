@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sessionTranscript } from "@/lib/discovery";
 import { itemsFromMessage } from "@/lib/chat-format";
-import { getChatManager } from "@/lib/chat-manager";
+import { getChatManager, openElsewhere } from "@/lib/chat-manager";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,5 +14,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ sess
   const items = raw.flatMap((m) => itemsFromMessage(m));
   const cm = getChatManager();
   const live = cm.get(sessionId);
-  return NextResponse.json({ sessionId, items, live: live ? cm.state(live) : null });
+  // Open in another app (and not here): a reply here carries it on as a copy.
+  const openIn = live && live.status !== "ended" ? null : openElsewhere(sessionId);
+  return NextResponse.json({ sessionId, items, live: live ? cm.state(live) : null, openIn });
 }

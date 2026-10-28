@@ -1,4 +1,4 @@
-// The engine that runs Claude for Protégé / Protégé.
+// The engine that runs Claude for Protégé.
 //
 // Default ("cli"): run the person's own installed Claude Code program headlessly
 // (`claude -p --output-format stream-json`). Nothing is shown in a terminal; the

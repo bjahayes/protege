@@ -4,11 +4,13 @@ import { apiFetch } from "@/lib/api-client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useBrainAvailable } from "@/lib/use-brain";
 
 export default function SidebarNav() {
   const pathname = usePathname();
   const [liveCount, setLiveCount] = useState(0);
   const [inboxCount, setInboxCount] = useState(0);
+  const brain = useBrainAvailable();
 
   useEffect(() => {
     let stop = false;
@@ -41,7 +43,7 @@ export default function SidebarNav() {
     { href: "/live", label: "Live", icon: "◉", badge: liveCount || undefined },
     { href: "/inbox", label: "Inbox", icon: "✉", badge: inboxCount || undefined, badgeColor: "warn" },
     { href: "/agents", label: "Agents", icon: "◎" },
-    { href: "/brain", label: "Brain", icon: "🧠" },
+    ...(brain ? [{ href: "/brain", label: "Brain", icon: "🧠" }] : []),
     { href: "/costs", label: "Cost & usage", icon: "$" },
   ];
 

@@ -75,7 +75,6 @@ export async function GET(req: NextRequest) {
         lastModified: s.lastModified,
         gitBranch: s.gitBranch,
         status: live && live.status !== "ended" ? live.status : null,
-        hereAt: cm.lastHere(s.sessionId) || undefined,
       };
     });
 

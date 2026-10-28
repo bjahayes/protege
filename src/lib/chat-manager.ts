@@ -6,7 +6,10 @@
 // manager only holds what has happened since its process started, for live viewers.
 
 import { randomUUID } from "crypto";
+import fs from "fs";
+import os from "os";
 import path from "path";
+import { forkSession, getSessionInfo } from "@anthropic-ai/claude-agent-sdk";
 import type { ModelInfo, PermissionMode, PermissionResult, PermissionUpdate, Query, SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 import { liveQuery, initProblem, SIGNED_OUT_RE, NOT_SIGNED_IN } from "./engine";
 import { projectIdFromPath } from "./config";
@@ -35,6 +38,9 @@ export interface ChatState {
   error?: string;
   startedAt: number;
   lastActivity: number;
+  /** Carried on from this conversation, because it was open in another app (see openElsewhere). */
+  continuedFrom?: string;
+  continuedBecause?: string;
 }
 
 /** Async queue the SDK reads the person's messages from; stays open until the chat closes. */
@@ -104,16 +110,38 @@ export interface StartOptions {
 
 export type Effort = "low" | "medium" | "high" | "xhigh" | "max";
 
+/** What each kind of Claude Code program is called, for "open in …". */
+const APP_NAMES: Record<string, string> = { "claude-desktop": "Claude desktop", cli: "a terminal", "sdk-ts": "another copy of Protégé" };
+
+/**
+ * The app this conversation is open in right now, if another Claude Code program has it open
+ * (Claude desktop, a terminal, an IDE). Every running Claude Code keeps a note of its session in
+ * ~/.claude/sessions/<pid>.json; a note counts while its process is alive. Two programs adding to
+ * one conversation split it into branches, and each then shows only its own.
+ */
+export function openElsewhere(sessionId: string): string | null {
+  const dir = path.join(process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), ".claude"), "sessions");
+  let files: string[] = [];
+  try {
+    files = fs.readdirSync(dir).filter((f) => f.endsWith(".json"));
+  } catch {
+    return null;
+  }
+  for (const f of files) {
+    try {
+      const n = JSON.parse(fs.readFileSync(path.join(dir, f), "utf8"));
+      if (n.sessionId !== sessionId || !n.pid) continue;
+      process.kill(n.pid, 0); // throws if the process has gone
+      return APP_NAMES[n.entrypoint] || "another app";
+    } catch {
+      /* unreadable, someone else's, or its process has ended */
+    }
+  }
+  return null;
+}
+
 class ChatManager {
   private chats = new Map<string, LiveChat>();
-  /** When Protégé last did something in each conversation, kept after its process ends. */
-  private here = new Map<string, number>();
-
-  /** When Protégé last worked in this conversation (0 if never since the server started). */
-  lastHere(sessionId: string): number {
-    const c = this.chats?.get(sessionId);
-    return Math.max(c?.lastActivity || 0, this.here?.get(sessionId) || 0);
-  }
 
   constructor() {
     const t = setInterval(() => this.reap(), 60_000);
@@ -145,8 +173,26 @@ class ChatManager {
     return () => c.subscribers.delete(cb);
   }
 
-  /** Start (or resume) a conversation's process. Returns the session id it runs under. */
-  start(o: StartOptions): string {
+  /**
+   * Start (or resume) a conversation's process. Returns the session id it runs under. A
+   * conversation open in another app is carried on as a copy, so neither app's history is cut.
+   */
+  async open(o: StartOptions): Promise<string> {
+    const elsewhere = o.resume && !this.chats.get(o.resume) ? openElsewhere(o.resume) : null;
+    if (!o.resume || !elsewhere) return this.start(o);
+    const dir = o.projectPath.replace(/\\/g, "/");
+    const info = await getSessionInfo(o.resume, { dir }).catch(() => undefined);
+    const name = info?.customTitle || info?.summary;
+    const title = name ? `${name} (continued in Protégé)` : undefined;
+    const fork = await forkSession(o.resume, { dir, title }).catch(() => forkSession(o.resume!, { title }));
+    const id = this.start({ ...o, resume: fork.sessionId });
+    const c = this.chats.get(id)!;
+    c.continuedFrom = o.resume;
+    c.continuedBecause = elsewhere;
+    return id;
+  }
+
+  private start(o: StartOptions): string {
     if (o.resume) {
       const live = this.chats.get(o.resume);
       if (live && live.status !== "ended") return o.resume;
@@ -434,8 +480,6 @@ class ChatManager {
   private setStatus(c: LiveChat, s: ChatStatus) {
     c.status = s;
     c.lastActivity = Date.now();
-    if (!this.here) this.here = new Map();
-    this.here.set(c.sessionId, c.lastActivity);
     this.emitState(c);
   }
 

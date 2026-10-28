@@ -16,6 +16,7 @@ import AssessmentView from "@/components/AssessmentView";
 import PartsMap from "@/components/simple/PartsMap";
 import RepoMapView from "@/components/RepoMapView";
 import BrainView from "@/components/BrainView";
+import { useBrainAvailable } from "@/lib/use-brain";
 import TranscriptText from "@/components/TranscriptText";
 import type { Assessment } from "@/lib/assessment";
 
@@ -39,6 +40,7 @@ export default function ProjectDetail({ params }: { params: Promise<{ id: string
   const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [gitRepo, setGitRepo] = useState(false);
   const [tab, setTab] = useState<Tab>("overview");
+  const brain = useBrainAvailable();
   const [activeJob, setActiveJob] = useState<string | null>(null);
   const [resumeInfo, setResumeInfo] = useState<{ sessionId: string; label: string } | null>(null);
   const [notFound, setNotFound] = useState(false);
@@ -86,7 +88,7 @@ export default function ProjectDetail({ params }: { params: Promise<{ id: string
   const tabs: { key: Tab; label: string; badge?: number | string }[] = [
     { key: "overview", label: "Overview" },
     { key: "map", label: "Map", badge: assessment ? "✦" : undefined },
-    { key: "brain", label: "Brain" },
+    ...(brain ? [{ key: "brain" as Tab, label: "Brain" }] : []),
     { key: "design", label: "Design", badge: docs.design ? undefined : "—" },
     { key: "plan", label: "Plan", badge: docs.plan ? undefined : "—" },
     { key: "tasks", label: "Tasks", badge: project.tasks.todo + project.tasks.doing + project.tasks.done || undefined },
