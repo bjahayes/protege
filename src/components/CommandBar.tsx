@@ -20,7 +20,8 @@ const NAV: Cmd[] = [
   { id: "nav-inbox", label: "Inbox", hint: "needs you", href: "/inbox", group: "Go to" },
   { id: "nav-agents", label: "Agents", hint: "runs & history", href: "/agents", group: "Go to" },
   { id: "nav-brain", label: "Brain", hint: "second brain", href: "/brain", group: "Go to" },
-  { id: "nav-costs", label: "Cost & usage", hint: "spend dashboard", href: "/costs", group: "Go to" },
+  { id: "nav-code", label: "Code", hint: "Claude Code sessions", href: "/chat", group: "Go to" },
+  { id: "nav-costs", label: "Usage", hint: "plan limits", href: "/costs", group: "Go to" },
 ];
 
 export default function CommandBar() {
@@ -120,7 +121,8 @@ export default function CommandBar() {
           i: "/inbox",
           a: "/agents",
           ...(brain ? { b: "/brain" } : {}),
-          c: "/costs",
+          c: "/chat",
+          u: "/costs",
         };
         const href = map[e.key.toLowerCase()];
         if (href) {
@@ -191,7 +193,8 @@ export default function CommandBar() {
               <Row keys="G then I" label="Inbox" />
               <Row keys="G then A" label="Agents" />
               {brain && <Row keys="G then B" label="Brain" />}
-              <Row keys="G then C" label="Cost & usage" />
+              <Row keys="G then C" label="Code" />
+              <Row keys="G then U" label="Usage" />
               <Row keys="?" label="This help" />
               <Row keys="Esc" label="Close" />
             </div>

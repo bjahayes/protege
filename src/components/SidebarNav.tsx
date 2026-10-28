@@ -38,13 +38,13 @@ export default function SidebarNav() {
 
   const items = [
     { href: "/", label: "Dashboard", icon: "▦" },
-    { href: "/chat", label: "Chat", icon: "✎" },
+    { href: "/chat", label: "Code", icon: "✎" },
     { href: "/assistant", label: "Assistant", icon: "✧" },
     { href: "/live", label: "Live", icon: "◉", badge: liveCount || undefined },
     { href: "/inbox", label: "Inbox", icon: "✉", badge: inboxCount || undefined, badgeColor: "warn" },
     { href: "/agents", label: "Agents", icon: "◎" },
     ...(brain ? [{ href: "/brain", label: "Brain", icon: "🧠" }] : []),
-    { href: "/costs", label: "Cost & usage", icon: "$" },
+    { href: "/costs", label: "Usage", icon: "◔" },
   ];
 
   return (

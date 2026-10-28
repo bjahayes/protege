@@ -1,7 +1,7 @@
-# Protégé (Protégé)
+# Protégé
 
 Mission control for your Claude Code projects, in the browser. It finds every folder you've used
-Claude Code in, shows where each project is up to, and lets you chat with Claude Code, run several
+Claude Code in, shows where each project is up to, and lets you work with Claude Code, run several
 agents at once and watch them work.
 
 Everything runs on your own computer, using **your own Claude Code sign-in**. There is no server
@@ -41,9 +41,11 @@ Start it with the npm scripts, not `next start` directly: they set up this insta
 
 ## What it does
 
-- **Chat**: talk to Claude Code the way you would in Claude desktop. Every Claude Code
-  conversation on your computer is listed, whether it started in a terminal, an IDE, Claude
-  desktop or here; open one to read it and carry on, or start a new chat in any project folder.
+- **Code**: work with Claude Code the way you would in Claude desktop's Code tab. Every Claude
+  Code session on your computer is listed, whether it started in a terminal, an IDE, Claude
+  desktop or here; open one to read it and carry on, or start a new session in any project folder.
+  If a session is also open in another app when you reply, Protégé carries it on as a copy, so
+  neither app's history is cut short.
   Replies stream in as they are written. Each step Claude takes (reading a file, running a
   command, editing) is a compact line you can open to see the command, its output or the lines
   changed. Screenshots that tools return show straight away.
@@ -66,6 +68,9 @@ Start it with the npm scripts, not `next start` directly: they set up this insta
   run anything.
 - **Agents and Live**: every running and recent agent across all projects, with its live output,
   tokens and cost, and a stop button.
+- **Usage**: your Claude plan's usage limits as Claude Code's `/usage` shows them (this session,
+  this week, per model, and when each resets), what is contributing to them, and what Protégé's
+  own runs used.
 - **Simple view**: a plainer version of all this for people who don't write code. Changes are
   made on a safe copy of the project and shown to you before anything is kept.
 
@@ -76,7 +81,7 @@ All optional, set as environment variables before `npm start`:
 | Variable | What it does |
 | --- | --- |
 | `PROTEGE_CLAUDE_PATH` | Full path to the `claude` program, if Protégé can't find it on your `PATH`. |
-| `PROTEGE_ENGINE=sdk` | Run tasks through the Claude Agent SDK instead of the `claude` program. Chats always use the SDK, pointed at your `claude` program. |
+| `PROTEGE_ENGINE=sdk` | Run tasks through the Claude Agent SDK instead of the `claude` program. Code sessions always use the SDK, pointed at your `claude` program. |
 | `PROTEGE_ALLOW_API_KEY=1` | Allow Claude Code to use an API key (billed per token). Without it, Protégé removes `ANTHROPIC_API_KEY` and stops any run that would bill an API key instead of your Claude plan. |
 | `PROTEGE_PREVIEW_PORT` | The port project previews are served on. Defaults to the port after Protégé's (4318). |
 

@@ -16,7 +16,7 @@ via the Claude Agent SDK.
   running. To try a change in a browser, build and run a separate copy:
   `PROTEGE_DIST_DIR=.next-test npx next build`, then in the background
   `PROTEGE_DIST_DIR=.next-test node scripts/serve.mjs next start -H 127.0.0.1 -p 4327` (previews on 4328); stop it
-  when done. When the real server needs a restart to pick up a change, say so and let the person restart it.
+  when done, delete `.next-test`, and put back `tsconfig.json` (the build adds `.next-test/types` to it). When the real server needs a restart to pick up a change, say so and let the person restart it.
 - Typecheck: `npx tsc --noEmit`
 - Tests (no model calls): `npm test` (arrow layout + Keep on a throwaway repo)
 - Build: `npm run build`

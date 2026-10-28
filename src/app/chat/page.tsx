@@ -1,8 +1,8 @@
 "use client";
 
-// Chat: talk to Claude Code the way Claude desktop does. The list on the left is every saved
+// Code: talk to Claude Code the way Claude desktop's Code tab does. The list on the left is every saved
 // Claude Code conversation on this computer (terminal, IDE, desktop and Protégé alike);
-// open one to read it and carry on, or start a new chat in any project folder.
+// open one to read it and carry on, or start a new session in any project folder.
 
 import { apiFetch } from "@/lib/api-client";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
@@ -28,7 +28,7 @@ interface ProjectRow {
   exists: boolean;
 }
 
-// The chat open last, in this browser: coming back to Chat with none chosen opens it again.
+// The session open last, in this browser: coming back to Code with none chosen opens it again.
 const LAST_CHAT = "protege.chat.last";
 
 function ChatPage() {
@@ -124,7 +124,7 @@ function ChatPage() {
               onClick={() => setPicking(!picking)}
               className="w-full text-left px-3 py-2 rounded-lg bg-accent/15 border border-accent/40 text-accent hover:bg-accent/25 text-sm font-medium"
             >
-              ＋ New chat
+              ＋ New session
             </button>
             {picking && (
               <div className="absolute z-20 left-0 right-0 mt-1 max-h-80 overflow-y-auto rounded-lg border border-border bg-panel shadow-xl">
@@ -153,7 +153,7 @@ function ChatPage() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search conversations"
+            placeholder="Search sessions"
             className="text-[12.5px] bg-bg border border-border rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-accent/50"
           />
         </div>
@@ -176,7 +176,7 @@ function ChatPage() {
               </div>
             </button>
           ))}
-          {!shown.length && <div className="text-[12.5px] text-muted px-2.5 py-3">{loaded ? "No conversations yet." : "Loading conversations…"}</div>}
+          {!shown.length && <div className="text-[12.5px] text-muted px-2.5 py-3">{loaded ? "No sessions yet." : "Loading sessions…"}</div>}
         </div>
       </aside>
 
@@ -200,8 +200,8 @@ function ChatPage() {
         ) : (
           <div className="h-full flex items-center justify-center text-center text-muted text-sm px-8">
             <div>
-              <div className="text-lg text-text mb-1">Chat with Claude Code</div>
-              Open a conversation on the left to read it and carry on, or start a new chat in one of your project folders.
+              <div className="text-lg text-text mb-1">Claude Code sessions</div>
+              Open a session on the left to read it and carry on, or start a new session in one of your project folders.
             </div>
           </div>
         )}

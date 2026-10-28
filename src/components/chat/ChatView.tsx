@@ -630,7 +630,7 @@ function Composer({
               if (e.key === "Escape" && busy) onStop();
             }}
             rows={2}
-            placeholder={busy ? "Add to the conversation — Claude reads it next" : hasSession ? "Reply to Claude…" : "What should Claude do?"}
+            placeholder={busy ? "Add to the session — Claude reads it next" : hasSession ? "Reply to Claude…" : "What should Claude do?"}
             className="w-full bg-transparent px-4 pt-3 pb-1 text-sm resize-none focus:outline-none"
           />
           <div className="flex items-center gap-2 px-3 pb-2">
@@ -999,7 +999,7 @@ export default function ChatView({
     <div className="flex flex-col flex-1 min-w-0 min-h-0">
       <header className="px-6 py-3 border-b border-border flex items-center gap-3 min-w-0">
         <div className="min-w-0">
-          <div className="text-sm font-semibold truncate">{title || (sessionId ? "Conversation" : "New chat")}</div>
+          <div className="text-sm font-semibold truncate">{title || (sessionId ? "Session" : "New session")}</div>
           <div className="text-[11.5px] text-muted truncate font-mono">{cwd || projectName}</div>
         </div>
         <div className="ml-auto flex items-center gap-2 shrink-0 text-[11.5px] text-muted">
@@ -1009,7 +1009,7 @@ export default function ChatView({
               className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border text-[12px] ${
                 openFile !== null ? "border-accent/50 text-accent bg-accent/10" : "border-border hover:text-text"
               }`}
-              title="Files Claude changed in this conversation"
+              title="Files Claude changed in this session"
             >
               {changes.length} file{changes.length === 1 ? "" : "s"} changed
               <span className="font-mono text-good">+{changes.reduce((n, f) => n + f.added, 0)}</span>
@@ -1035,10 +1035,10 @@ export default function ChatView({
         className="flex-1 min-h-0 overflow-y-auto"
       >
         <div className="max-w-3xl mx-auto px-6 py-6 flex flex-col gap-3">
-          {loading && <div className="text-sm text-muted">Loading the conversation…</div>}
+          {loading && <div className="text-sm text-muted">Loading the session…</div>}
           {!loading && !rows.length && !partial && (
             <div className="text-center text-muted text-sm mt-24">
-              <div className="text-lg text-text mb-1">{sessionId ? "Nothing to show yet" : `New chat in ${projectName || "this project"}`}</div>
+              <div className="text-lg text-text mb-1">{sessionId ? "Nothing to show yet" : `New session in ${projectName || "this project"}`}</div>
               Claude Code works in <span className="font-mono">{cwd || projectName}</span>, using your own sign-in, settings and CLAUDE.md.
             </div>
           )}
@@ -1064,12 +1064,12 @@ export default function ChatView({
         notice={
           elsewhere ? (
             <div className="text-[12px] text-warn mb-2">
-              This conversation is open in {elsewhere}. If you reply here, Protégé carries it on as a copy, so the conversation in{" "}
+              This session is open in {elsewhere}. If you reply here, Protégé carries it on as a copy, so the session in{" "}
               {elsewhere} keeps its whole history and so does this one.
             </div>
           ) : live?.continuedFrom ? (
             <div className="text-[12px] text-muted mb-2">
-              This is a copy of a conversation that was open in {live.continuedBecause || "another app"}. Protégé carried it on here so
+              This is a copy of a session that was open in {live.continuedBecause || "another app"}. Protégé carried it on here so
               neither one loses messages; the original is unchanged.
             </div>          ) : null
         }
