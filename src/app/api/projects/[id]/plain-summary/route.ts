@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { runAgent } from "@/lib/agent-run";
+import { getAgent } from "@/lib/agent-store";
 import { projectDir, unknownProject } from "@/lib/project-guard";
 import fs from "fs";
 import { getProject } from "@/lib/discovery";
-import { getJobManager } from "@/lib/job-manager";
-import { buildPlainSummaryPrompt, readPlainSummary } from "@/lib/plain-summary";
+import { readPlainSummary } from "@/lib/plain-summary";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,16 +23,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!fs.existsSync(dir)) return NextResponse.json({ error: "Project folder missing" }, { status: 400 });
   const body = await req.json().catch(() => ({}));
   const project = await getProject(dir);
-  const job = getJobManager().launch({
-    projectPath: dir,
+  // Run by its agent, so the run is named and each result is kept as a version.
+  const job = await runAgent(getAgent("plain-summary")!, {
+    dir,
     projectName: project?.name || dir,
-    prompt: buildPlainSummaryPrompt(dir),
-    kind: "assess",
     model: body.model || undefined,
-    permissionMode: "acceptEdits",
-    effort: body.effort || "high",
-    maxTurns: 30,
-    primeContext: false,
+    effort: body.effort || undefined,
   });
   return NextResponse.json({ job });
 }

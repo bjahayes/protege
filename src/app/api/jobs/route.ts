@@ -6,6 +6,7 @@ import { getProject } from "@/lib/discovery";
 import { isDemoId, demoSummaries } from "@/lib/demo";
 import { readTasks } from "@/lib/docs";
 import { metaRel } from "@/lib/meta";
+import { getAgent } from "@/lib/agent-store";
 import type { PermissionMode } from "@anthropic-ai/claude-agent-sdk";
 
 // A directive appended to Simple-mode change jobs so the assistant keeps the
@@ -62,21 +63,26 @@ export async function POST(req: NextRequest) {
   let resume: string | undefined = body.resume || undefined;
   let worktree: { path: string; branch?: string; baseRef?: string } | undefined;
   let parentJobId: string | undefined;
+  let agentId: string | undefined = body.agentId ? String(body.agentId) : undefined;
   if (body.continueFrom) {
     const prev = getJobManager().get(String(body.continueFrom));
     if (prev?.sessionId) {
       resume = prev.sessionId;
       parentJobId = prev.id;
+      agentId ||= prev.agentId; // a reply carries on the same agent's work
       if (prev.worktreeState === "active" && prev.worktreePath) {
         worktree = { path: prev.worktreePath, branch: prev.branch, baseRef: prev.baseRef };
       }
     }
   }
 
+  // A run started from somewhere that stands for an agent (the Simple view's "make a change").
+  const a = agentId ? getAgent(agentId) : null;
   const job = getJobManager().launch({
     projectPath,
     projectName,
     prompt: finalPrompt,
+    agent: a ? { id: a.id, name: a.name, version: a.version } : undefined,
     kind: "run",
     model: body.model || undefined,
     permissionMode: (body.permissionMode as PermissionMode) || "acceptEdits",

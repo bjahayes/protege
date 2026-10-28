@@ -2,6 +2,7 @@
 
 import { apiFetch } from "@/lib/api-client";
 import { useEffect, useState } from "react";
+import { changesText, type AgentDef } from "@/lib/agents";
 
 interface Props {
   projectId: string;
@@ -11,48 +12,6 @@ interface Props {
   onLaunched: (jobId: string) => void;
 }
 
-const TEMPLATES: { key: string; label: string; hint: string; permission: string; prompt: string }[] = [
-  {
-    key: "plan",
-    label: "Plan first",
-    hint: "Design a plan, write no code",
-    permission: "plan",
-    prompt:
-      "Read DESIGN.md, PLAN.md and CLAUDE.md if present. Then produce a detailed, step-by-step implementation plan for the following goal. Identify the files to change and call out risks. Do NOT write any code yet.\n\nGoal: ",
-  },
-  {
-    key: "build",
-    label: "Build a task",
-    hint: "Implement one scoped task",
-    permission: "acceptEdits",
-    prompt:
-      "Implement the following task. Keep the change scoped and consistent with the existing code and conventions in CLAUDE.md. Run any relevant tests when done and report what you changed.\n\nTask: ",
-  },
-  {
-    key: "claude",
-    label: "Refresh CLAUDE.md",
-    hint: "Update project memory",
-    permission: "acceptEdits",
-    prompt:
-      "Review the current state of this codebase (structure, build/test commands, key conventions and gotchas) and update CLAUDE.md so a fresh agent could get productive quickly. Propose the changes and apply them to CLAUDE.md.",
-  },
-  {
-    key: "status",
-    label: "Summarize status",
-    hint: "Where is this up to?",
-    permission: "acceptEdits",
-    prompt:
-      "Summarize where this project is currently up to: what's built, what's in progress, and what remains. Base it on the code, DESIGN.md, PLAN.md and the task list (.protege/tasks.json). Write the summary to .protege/status.md.",
-  },
-  {
-    key: "free",
-    label: "Freeform",
-    hint: "Anything",
-    permission: "acceptEdits",
-    prompt: "",
-  },
-];
-
 const MODELS = [
   { id: "", label: "Default" },
   { id: "claude-opus-4-8", label: "Opus 4.8" },
@@ -61,9 +20,15 @@ const MODELS = [
   { id: "claude-haiku-4-5-20251001", label: "Haiku 4.5" },
 ];
 
+const OWN = "own";
+
 export default function RunForm({ projectId, gitRepo, resume, onClearResume, onLaunched }: Props) {
-  const [tpl, setTpl] = useState("build");
-  const [prompt, setPrompt] = useState(TEMPLATES.find((t) => t.key === "build")!.prompt);
+  // Which agent to run; OWN is "your own instruction", with every option.
+  const [agents, setAgents] = useState<AgentDef[]>([]);
+  const [groups, setGroups] = useState<{ key: string; title: string }[]>([]);
+  const [agentId, setAgentId] = useState("make-change");
+  const [input, setInput] = useState("");
+  const [prompt, setPrompt] = useState("");
   const [model, setModel] = useState("");
   const [permission, setPermission] = useState("acceptEdits");
   const [effort, setEffort] = useState("");
@@ -75,22 +40,42 @@ export default function RunForm({ projectId, gitRepo, resume, onClearResume, onL
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  // When a resume target is chosen, switch to a blank follow-up prompt.
+  useEffect(() => {
+    apiFetch("/api/agents", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((j) => {
+        setAgents(j.agents || []);
+        setGroups(j.groups || []);
+      })
+      .catch(() => {});
+  }, []);
+
+  // Continuing a session is always your own instruction.
   useEffect(() => {
     if (resume) {
-      setTpl("free");
+      setAgentId(OWN);
       setPrompt("");
     }
   }, [resume?.sessionId]);
 
-  const pickTemplate = (key: string) => {
-    setTpl(key);
-    const t = TEMPLATES.find((x) => x.key === key)!;
-    setPrompt(t.prompt);
-    setPermission(t.permission);
+  const agent = agentId === OWN ? null : agents.find((a) => a.id === agentId) || null;
+
+  const runAgent = async () => {
+    if (!agent) return;
+    setBusy(true);
+    setErr(null);
+    const r = await apiFetch(`/api/agents/${agent.id}/run`, {
+      method: "POST",
+      body: JSON.stringify({ projectId, input, model: model || undefined, effort: effort || undefined }),
+    });
+    const j = await r.json().catch(() => ({}));
+    setBusy(false);
+    if (j.job?.id) onLaunched(j.job.id);
+    else setErr(j.error || "Couldn't start the agent.");
   };
 
   const launch = async () => {
+    if (agent) return runAgent();
     if (!prompt.trim()) {
       setErr("Prompt is required");
       return;
@@ -145,30 +130,49 @@ export default function RunForm({ projectId, gitRepo, resume, onClearResume, onL
           </button>
         </div>
       )}
-      <div className="flex flex-wrap gap-1.5">
-        {TEMPLATES.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => pickTemplate(t.key)}
-            title={t.hint}
-            className={`px-2.5 py-1 rounded-lg text-xs border transition-colors ${
-              tpl === t.key
-                ? "border-accent/50 bg-accent/15 text-accent"
-                : "border-border text-muted hover:text-text hover:border-border"
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <Field label="Agent">
+        <select value={agentId} onChange={(e) => setAgentId(e.target.value)} className="protege-select" disabled={!!resume}>
+          {groups.map((g) => {
+            const list = agents.filter((a) => a.group === g.key);
+            return list.length ? (
+              <optgroup key={g.key} label={g.title}>
+                {list.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.emoji} {a.name}
+                  </option>
+                ))}
+              </optgroup>
+            ) : null;
+          })}
+          <option value={OWN}>💬 Your own instruction</option>
+        </select>
+      </Field>
 
-      <textarea
-        value={prompt}
-        onChange={(e) => setPrompt(e.target.value)}
-        rows={7}
-        placeholder="Describe the job for the agent…"
-        className="w-full px-3 py-2.5 rounded-lg bg-bg border border-border text-sm font-mono leading-relaxed focus:outline-none focus:border-accent/60 resize-y"
-      />
+      {agent ? (
+        <div className="rounded-lg border border-border bg-panel px-3 py-2.5 text-[12.5px] leading-relaxed">
+          <div>{agent.description || agent.summary}</div>
+          <div className="text-muted mt-1">{changesText(agent)}</div>
+        </div>
+      ) : (
+        <textarea
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          rows={7}
+          placeholder="Describe the job for Claude…"
+          className="w-full px-3 py-2.5 rounded-lg bg-bg border border-border text-sm leading-relaxed focus:outline-none focus:border-accent/60 resize-y"
+        />
+      )}
+      {agent?.input && (
+        <Field label={agent.input.label}>
+          <textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            rows={3}
+            placeholder={agent.input.placeholder}
+            className="w-full px-3 py-2 rounded-lg bg-bg border border-border text-sm focus:outline-none focus:border-accent/60"
+          />
+        </Field>
+      )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
         <Field label="Model">
@@ -180,14 +184,14 @@ export default function RunForm({ projectId, gitRepo, resume, onClearResume, onL
             ))}
           </select>
         </Field>
-        <Field label="Permission">
+        {!agent && <Field label="Permission">
           <select value={permission} onChange={(e) => setPermission(e.target.value)} className="protege-select">
             <option value="plan">plan (read-only)</option>
             <option value="default">default (ask)</option>
             <option value="acceptEdits">acceptEdits</option>
             <option value="bypassPermissions">bypass (danger)</option>
           </select>
-        </Field>
+        </Field>}
         <Field label="Effort">
           <select value={effort} onChange={(e) => setEffort(e.target.value)} className="protege-select">
             <option value="">default</option>
@@ -196,16 +200,18 @@ export default function RunForm({ projectId, gitRepo, resume, onClearResume, onL
             <option value="high">high</option>
           </select>
         </Field>
-        <Field label="Max turns">
+        {!agent && <Field label="Max turns">
           <input
             value={maxTurns}
             onChange={(e) => setMaxTurns(e.target.value.replace(/[^0-9]/g, ""))}
             placeholder="∞"
             className="protege-select"
           />
-        </Field>
+        </Field>}
       </div>
 
+      {!agent && (
+        <>
       <label
         className={`flex items-start gap-2.5 rounded-lg border p-2.5 cursor-pointer ${
           gitRepo ? "border-border hover:border-accent/40" : "border-border opacity-50 cursor-not-allowed"
@@ -273,19 +279,23 @@ export default function RunForm({ projectId, gitRepo, resume, onClearResume, onL
         </div>
       </label>
 
+        </>
+      )}
+
       {err && <div className="text-bad text-xs">{err}</div>}
 
       <div className="flex items-center justify-between">
         <p className="text-[11px] text-muted max-w-md">
-          Runs Claude Code in this project folder with your existing login. `plan` mode is read-only and safe to
-          explore with.
+          {agent
+            ? "Runs Claude Code in this project folder with your existing login, under this agent's limits."
+            : "Runs Claude Code in this project folder with your existing login. `plan` mode is read-only and safe to explore with."}
         </p>
         <button
           onClick={launch}
           disabled={busy}
           className="px-4 py-2 rounded-lg bg-accent/20 border border-accent/40 text-accent hover:bg-accent/30 text-sm font-semibold disabled:opacity-40"
         >
-          {busy ? "Launching…" : resume ? "▶ Continue session" : "▶ Launch agent"}
+          {busy ? "Starting…" : resume ? "▶ Continue session" : agent ? `▶ Run ${agent.name}` : "▶ Run"}
         </button>
       </div>
 

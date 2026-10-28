@@ -52,6 +52,14 @@ via the Claude Agent SDK.
     Strips ANTHROPIC_API_KEY/ANTHROPIC_AUTH_TOKEN and stops a run whose init `apiKeySource` isn't `none`/`oauth`
     unless `PROTEGE_ALLOW_API_KEY=1`. `PROTEGE_CLAUDE_PATH` overrides where `claude` is found.
   - `live-build.ts` — client-safe: stages, plain step labels, touched files, parts-map layout and edges.
+  - `agents.ts` (client-safe) — the built-in agents: each has instructions, a kind (`document` keeps one file,
+    `report` writes `.protege/reports/<id>.md`, `plan` only reads, `change` edits on a safe copy) and a version.
+    `agent-store.ts` keeps the agents people make (every save a new version, in `agent_versions`).
+    `agent-run.ts` runs one: document and report agents get `permissionMode: "default"` with only Read/Glob/Grep
+    and Edit/Write of their one file allowed, and Bash disallowed, so the limit holds whatever the person's
+    settings allow. Every run records `agentId`/`agentName`/`agentVersion` on its job.
+  - `doc-versions.ts` — every version of a document an agent keeps, in `.protege/versions/<file>/` with who made
+    it; `DocVersions.tsx` shows them on the Design and Plan tabs with Read and Put back.
   - `starter.ts` / `starter-steps.ts` — projects made in Start something new keep `.protege/starter.json`
     (template, description, the shaping run, when first tried). `starterProgress()` (client-safe) works out the
     five getting-started steps from it and the project's jobs; `GettingStarted.tsx` shows them on the project page.

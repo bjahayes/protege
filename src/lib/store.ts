@@ -70,6 +70,9 @@ export function getDb(): Database.Database {
   addCol("eval_reason", "TEXT");
   addCol("checks_passed", "INTEGER");
   addCol("checks_command", "TEXT");
+  addCol("agent_id", "TEXT");
+  addCol("agent_name", "TEXT");
+  addCol("agent_version", "INTEGER");
   g.__protegeDb = db;
   return db;
 }

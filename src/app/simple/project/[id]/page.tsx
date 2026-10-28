@@ -81,6 +81,7 @@ export default function SimpleProject({ params }: { params: Promise<{ id: string
       body: JSON.stringify({
         projectId: id,
         prompt: text.trim(),
+        agentId: "make-change",
         permissionMode: "acceptEdits",
         isolate: gitRepo,
         autoVerify: gitRepo,

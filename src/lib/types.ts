@@ -72,6 +72,10 @@ export interface JobEvent {
 
 export interface Job {
   id: string;
+  /** The agent this was a run of (see agents.ts), and which version of it. */
+  agentId?: string;
+  agentName?: string;
+  agentVersion?: number;
   projectId: string;
   projectPath: string;
   projectName: string;

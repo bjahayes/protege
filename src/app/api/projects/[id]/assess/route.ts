@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { runAgent } from "@/lib/agent-run";
+import { getAgent } from "@/lib/agent-store";
 import { projectDir, unknownProject } from "@/lib/project-guard";
 import fs from "fs";
 import { getProject } from "@/lib/discovery";
-import { getJobManager } from "@/lib/job-manager";
-import { buildAssessmentPrompt, readAssessment } from "@/lib/assessment";
+import { readAssessment } from "@/lib/assessment";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,15 +26,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const body = await req.json().catch(() => ({}));
   const project = await getProject(dir);
 
-  const job = getJobManager().launch({
-    projectPath: dir,
+  // Run by its agent, so the run is named and each result is kept as a version.
+  const job = await runAgent(getAgent("map")!, {
+    dir,
     projectName: project?.name || dir,
-    prompt: buildAssessmentPrompt(dir),
-    kind: "assess",
     model: body.model || undefined,
-    permissionMode: "acceptEdits",
-    effort: body.effort || "high",
-    maxTurns: body.maxTurns ? Number(body.maxTurns) : 40,
+    effort: body.effort || undefined,
   });
   return NextResponse.json({ job });
 }

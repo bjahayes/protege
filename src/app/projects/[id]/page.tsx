@@ -14,6 +14,7 @@ import AgentStream from "@/components/AgentStream";
 import StatusBadge from "@/components/StatusBadge";
 import AssessmentView from "@/components/AssessmentView";
 import ProjectDiagram from "@/components/ProjectDiagram";
+import DocVersions from "@/components/DocVersions";
 import RepoMapView from "@/components/RepoMapView";
 import BrainView from "@/components/BrainView";
 import { useBrainAvailable } from "@/lib/use-brain";
@@ -174,8 +175,10 @@ export default function ProjectDetail({ params }: { params: Promise<{ id: string
           />
         )}
         {tab === "brain" && <BrainView projectId={id} />}
-        {tab === "design" && <DocPane content={docs.design} kind="DESIGN.md" projectId={id} onScaffold={load} />}
-        {tab === "plan" && <DocPane content={docs.plan} kind="PLAN.md" projectId={id} onScaffold={load} />}
+        {tab === "design" && (
+          <DocPane content={docs.design} kind="DESIGN.md" projectId={id} onScaffold={load} agent={{ id: "update-design", name: "Update the design" }} />
+        )}
+        {tab === "plan" && <DocPane content={docs.plan} kind="PLAN.md" projectId={id} onScaffold={load} agent={{ id: "update-plan", name: "Update the plan" }} />}
         {tab === "tasks" && (
           <div className="max-w-4xl">
             <MissionBar projectId={id} gitRepo={gitRepo} todoCount={project.tasks.todo} onChange={load} />
@@ -535,20 +538,16 @@ function DocPane({
   kind,
   projectId,
   onScaffold,
+  agent,
 }: {
   content: string | null;
   kind: string;
   projectId: string;
   onScaffold: () => void;
+  /** The agent that keeps this document up to date. */
+  agent: { id: string; name: string };
 }) {
   const [busy, setBusy] = useState(false);
-  if (content) {
-    return (
-      <div className="max-w-4xl rounded-xl border border-border bg-panel p-6">
-        <MarkdownView content={content} />
-      </div>
-    );
-  }
   const scaffold = async () => {
     setBusy(true);
     await apiFetch(`/api/projects/${projectId}`, {
@@ -560,21 +559,31 @@ function DocPane({
     setBusy(false);
   };
   return (
+    <DocVersions
+      projectId={projectId}
+      file={kind}
+      content={content}
+      agent={agent}
+      onChanged={onScaffold}
+      empty={
     <div className="max-w-xl text-center py-16">
       <p className="text-muted text-sm mb-4">
-        No <code className="text-xs">{kind}</code> in this project yet.
+        No <code className="text-xs">{kind}</code> in this project yet. <b>{agent.name}</b> (the button above) writes one from the code,
+        or start from templates:
       </p>
       <button
         onClick={scaffold}
         disabled={busy}
         className="px-4 py-2 rounded-lg bg-accent/15 border border-accent/30 text-accent text-sm hover:bg-accent/25 disabled:opacity-40"
       >
-        {busy ? "Creating…" : "Scaffold best-practice docs"}
+        {busy ? "Creating…" : "Start from templates"}
       </button>
       <p className="text-[11px] text-muted mt-3">
         Creates DESIGN.md, PLAN.md, CLAUDE.md and .protege/tasks.json templates.
       </p>
     </div>
+      }
+    />
   );
 }
 

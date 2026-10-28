@@ -37,6 +37,9 @@ export interface LaunchOptions {
   autoResumeCount?: number;
   worktree?: { path: string; branch?: string; baseRef?: string }; // reuse an existing worktree (continuations)
   onDone?: (job: Job) => void; // internal completion hook (missions)
+  agent?: { id: string; name: string; version: number }; // the agent this is a run of
+  allowedTools?: string[]; // with permissionMode "default", the only tools the run may use
+  disallowedTools?: string[]; // tools the run may never use, whatever the person's settings allow
   primeContext?: boolean; // inject a repo-map + assessment orientation as the system prompt
   autoVerify?: boolean; // run the project's checks after an isolated run completes
   autoFix?: boolean; // on check failure, spawn a bounded fix pass
@@ -66,6 +69,9 @@ function rowToJob(r: any): Job {
     projectPath: r.project_path,
     projectName: r.project_name || r.project_path,
     prompt: r.prompt,
+    agentId: r.agent_id ?? undefined,
+    agentName: r.agent_name ?? undefined,
+    agentVersion: r.agent_version ?? undefined,
     status: r.status,
     kind: (r.kind as JobKind) || "run",
     model: r.model ?? undefined,
@@ -350,6 +356,9 @@ class JobManager {
       projectPath: opts.projectPath,
       projectName: opts.projectName,
       prompt: opts.prompt,
+      agentId: opts.agent?.id,
+      agentName: opts.agent?.name,
+      agentVersion: opts.agent?.version,
       status: "starting",
       kind: opts.kind || "run",
       model: opts.model,
@@ -441,6 +450,8 @@ class JobManager {
       maxBudgetUsd: opts.maxBudgetUsd,
       resume: opts.resume,
       systemPrompt,
+      ...(opts.allowedTools ? { allowedTools: opts.allowedTools } : {}),
+      ...(opts.disallowedTools ? { disallowedTools: opts.disallowedTools } : {}),
       includePartialMessages: false,
       settingSources: ["user", "project", "local"],
       abortController: job.abort,
@@ -474,7 +485,7 @@ class JobManager {
     try {
       const changed = (await unsavedPaths(job.projectPath)).filter((p) => !before.has(p));
       if (!changed.length) return;
-      const saved = await saveChanges(job.projectPath, `protege: ${job.prompt.split("\n")[0]}`, changed);
+      const saved = await saveChanges(job.projectPath, commitMessage(job), changed);
       if (saved) this.emit(job, "system", { savedToHistory: changed.length });
     } catch (e: any) {
       this.emit(job, "system", { saveFailed: String(e?.message || e).slice(0, 300) });
@@ -517,7 +528,7 @@ class JobManager {
   private async finalizeWorktree(job: LiveJob) {
     if (job.worktreeState !== "active" || !job.worktreePath) return;
     try {
-      const committed = await commitWorktree(job.worktreePath, `protege: ${job.prompt}`);
+      const committed = await commitWorktree(job.worktreePath, commitMessage(job));
       this.emit(job, "system", { worktreeCommitted: committed });
     } catch {
       /* ignore */
@@ -718,8 +729,9 @@ class JobManager {
           `INSERT OR REPLACE INTO jobs
             (id, project_path, project_name, prompt, status, kind, session_id, model,
              started_at, ended_at, input_tokens, output_tokens, cost_usd, num_turns, error,
-             cwd, worktree_state, worktree_path, branch, base_ref, parent_job_id, auto_resume_count)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+             cwd, worktree_state, worktree_path, branch, base_ref, parent_job_id, auto_resume_count,
+             agent_id, agent_name, agent_version)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
         )
         .run(
           j.id,
@@ -743,12 +755,21 @@ class JobManager {
           j.branch ?? null,
           j.baseRef ?? null,
           j.parentJobId ?? null,
-          j.autoResumeCount ?? null
+          j.autoResumeCount ?? null,
+          j.agentId ?? null,
+          j.agentName ?? null,
+          j.agentVersion ?? null
         );
     } catch {
       /* ignore */
     }
   }
+}
+
+/** A run's entry in the project's git history: the agent's name, then what it was asked. */
+function commitMessage(j: Job): string {
+  const first = j.prompt.split("\n")[0].slice(0, 200);
+  return j.agentName ? `protege: ${j.agentName} (agent version ${j.agentVersion ?? 1})\n\n${first}` : `protege: ${first}`;
 }
 
 function safeParse(s: string) {
