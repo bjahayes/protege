@@ -36,6 +36,9 @@ export default function ProjectDetail({ params }: { params: Promise<{ id: string
   const { id } = use(params);
   const [project, setProject] = useState<ProjectSummary | null>(null);
   const [docs, setDocs] = useState<Docs | null>(null);
+  // Where the plan and design actually are (PLAN.md, docs/PLAN.md…), and every document's versions.
+  const [docPaths, setDocPaths] = useState<{ design: string | null; plan: string | null }>({ design: null, plan: null });
+  const [documents, setDocuments] = useState<DocSummary[]>([]);
   const [sessions, setSessions] = useState<SessionInfo[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [assessment, setAssessment] = useState<Assessment | null>(null);
@@ -61,6 +64,8 @@ export default function ProjectDetail({ params }: { params: Promise<{ id: string
     const j = await r.json();
     setProject(j.project);
     setDocs(j.docs);
+    setDocPaths(j.docPaths || { design: null, plan: null });
+    setDocuments(j.documents || []);
     setSessions(j.sessions || []);
     setJobs(j.jobs || []);
     setAssessment(j.assessment || null);
@@ -161,7 +166,7 @@ export default function ProjectDetail({ params }: { params: Promise<{ id: string
 
       <div className="flex-1 min-h-0 overflow-y-auto p-6">
         {tab === "overview" && (
-          <Overview project={project} docs={docs} jobs={jobs} assessment={assessment} projectId={id} onReload={load} onGoRun={() => setTab("run")} onGoMap={() => setTab("map")} />
+          <Overview project={project} docs={docs} documents={documents} jobs={jobs} assessment={assessment} projectId={id} onReload={load} onGoRun={() => setTab("run")} onGoMap={() => setTab("map")} />
         )}
         {tab === "map" && (
           <MapTab
@@ -176,9 +181,11 @@ export default function ProjectDetail({ params }: { params: Promise<{ id: string
         )}
         {tab === "brain" && <BrainView projectId={id} />}
         {tab === "design" && (
-          <DocPane content={docs.design} kind="DESIGN.md" projectId={id} onScaffold={load} agent={{ id: "update-design", name: "Update the design" }} />
+          <DocPane content={docs.design} kind={docPaths.design || "DESIGN.md"} projectId={id} onScaffold={load} agent={{ id: "update-design", name: "Update the design" }} />
         )}
-        {tab === "plan" && <DocPane content={docs.plan} kind="PLAN.md" projectId={id} onScaffold={load} agent={{ id: "update-plan", name: "Update the plan" }} />}
+        {tab === "plan" && (
+          <DocPane content={docs.plan} kind={docPaths.plan || "PLAN.md"} projectId={id} onScaffold={load} agent={{ id: "update-plan", name: "Update the plan" }} />
+        )}
         {tab === "tasks" && (
           <div className="max-w-4xl">
             <MissionBar projectId={id} gitRepo={gitRepo} todoCount={project.tasks.todo} onChange={load} />
@@ -250,6 +257,7 @@ export default function ProjectDetail({ params }: { params: Promise<{ id: string
 function Overview({
   project,
   docs,
+  documents,
   jobs,
   assessment,
   projectId,
@@ -259,6 +267,7 @@ function Overview({
 }: {
   project: ProjectSummary;
   docs: Docs;
+  documents: DocSummary[];
   jobs: Job[];
   assessment: Assessment | null;
   projectId: string;
@@ -275,11 +284,6 @@ function Overview({
         <Stat label="Sessions" value={project.sessionCount} color="text-text" />
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        <DocFlag on={project.hasDesign} label="DESIGN.md" />
-        <DocFlag on={project.hasPlan} label="PLAN.md" />
-        <DocFlag on={project.hasClaudeMd} label="CLAUDE.md" />
-      </div>
 
       <section>
         <h2 className="text-sm font-semibold text-muted mb-2">Status</h2>
@@ -296,6 +300,8 @@ function Overview({
           )}
         </div>
       </section>
+
+      <DocumentsList projectId={projectId} documents={documents} onChanged={onReload} />
 
       {jobs.length > 0 && (
         <section>
@@ -520,16 +526,69 @@ function AssessmentSummary({ a, onGoMap }: { a: Assessment; onGoMap: () => void 
   );
 }
 
-function DocFlag({ on, label }: { on: boolean; label: string }) {
+interface DocSummary {
+  file: string;
+  title: string;
+  agentId?: string;
+  agentName?: string;
+  versions: number;
+  lastBy?: string;
+  lastAt?: number;
+}
+
+/** Every document Protégé keeps for this project, with its versions; each opens in place. */
+function DocumentsList({ projectId, documents, onChanged }: { projectId: string; documents: DocSummary[]; onChanged: () => void }) {
+  const [open, setOpen] = useState<string | null>(null);
+  const [text, setText] = useState<string | null>(null);
+  useEffect(() => {
+    if (!open) return;
+    setText(null);
+    // The current text is the newest version, which the list has just saved.
+    const d = documents.find((x) => x.file === open);
+    if (!d) return;
+    apiFetch(`/api/projects/${projectId}/versions?file=${encodeURIComponent(open)}&n=${d.versions}`, { cache: "no-store" })
+      .then((r) => r.json())
+      .then((j) => setText(j.text ?? ""))
+      .catch(() => {});
+  }, [open, projectId, documents]);
   return (
-    <span
-      className={`text-xs px-2 py-1 rounded-lg border ${
-        on ? "border-good/30 text-good bg-good/10" : "border-border text-muted"
-      }`}
-    >
-      {on ? "✓ " : "○ "}
-      {label}
-    </span>
+    <section>
+      <h2 className="text-sm font-semibold text-muted mb-2">Documents</h2>
+      {documents.length === 0 ? (
+        <p className="text-[12.5px] text-muted">
+          None yet. The agents on the Agents page write the plan, design, user guide and reports, and every version is kept.
+        </p>
+      ) : (
+        <div className="rounded-xl border border-border bg-panel divide-y divide-border">
+          {documents.map((d) => (
+            <div key={d.file}>
+              <button onClick={() => setOpen(open === d.file ? null : d.file)} className="w-full text-left flex items-center gap-3 px-4 py-2.5 hover:bg-panel-2">
+                <span className="text-[10px] text-muted w-3">{open === d.file ? "▾" : "▸"}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="text-sm">{d.title}</span> <span className="text-[11px] text-muted font-mono">{d.file}</span>
+                  {d.lastBy && <span className="block text-[11.5px] text-muted truncate">Latest: {d.lastBy}</span>}
+                </span>
+                <span className="text-[11.5px] text-muted shrink-0">
+                  {d.versions} {d.versions === 1 ? "version" : "versions"}
+                  {d.lastAt ? ` · ${timeAgo(d.lastAt)}` : ""}
+                </span>
+              </button>
+              {open === d.file && (
+                <div className="px-4 pb-4 pt-1 bg-bg/40">
+                  <DocVersions
+                    projectId={projectId}
+                    file={d.file}
+                    content={text}
+                    agent={d.agentId && d.agentName ? { id: d.agentId, name: d.agentName } : undefined}
+                    onChanged={onChanged}
+                  />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 

@@ -70,11 +70,9 @@ export default function DocVersions({
         <span className="font-mono text-[12px]">{file}</span>
         {latest ? (
           <span className="text-muted">
-            Version {latest.n}, {latest.by === "Before Protégé's agents" ? "as it was before Protégé's agents" : `made by ${latest.by}`},{" "}
+            Version {latest.n} of {versions.length}: {latest.agentId ? `made by ${latest.by}` : latest.by},{" "}
             {new Date(latest.at).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}
           </span>
-        ) : content ? (
-          <span className="text-muted">No saved versions yet; one is saved each time an agent changes it.</span>
         ) : null}
         {versions.length > 0 && (
           <button onClick={() => setOpen(!open)} className="text-accent hover:underline">
@@ -98,7 +96,7 @@ export default function DocVersions({
           {[...versions].reverse().map((v) => (
             <div key={v.n} className={`flex items-center gap-3 px-4 py-2 text-[12.5px] ${viewing?.n === v.n ? "bg-panel-2" : ""}`}>
               <span className="font-medium w-20 shrink-0">Version {v.n}</span>
-              <span className="flex-1 min-w-0 truncate text-muted">
+              <span className="flex-1 min-w-0 truncate text-muted" title={v.by}>
                 {v.by}
                 {v.agentVersion ? ` (agent version ${v.agentVersion})` : ""}
               </span>

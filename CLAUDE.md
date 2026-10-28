@@ -58,8 +58,11 @@ via the Claude Agent SDK.
     `agent-run.ts` runs one: document and report agents get `permissionMode: "default"` with only Read/Glob/Grep
     and Edit/Write of their one file allowed, and Bash disallowed, so the limit holds whatever the person's
     settings allow. Every run records `agentId`/`agentName`/`agentVersion` on its job.
-  - `doc-versions.ts` — every version of a document an agent keeps, in `.protege/versions/<file>/` with who made
-    it; `DocVersions.tsx` shows them on the Design and Plan tabs with Read and Put back.
+  - `doc-versions.ts` — every version of every project document, whoever changed it, in `.protege/versions/<file>/`.
+    `ensureVersioned()` runs whenever Protégé reads a document (the project API does it for all of them): the first
+    time it imports the document's git history, then any change since the last version becomes a new one. While an
+    agent works on a document the check waits, so the agent's run is credited. Text differing only in line endings
+    is the same version. `DocVersions.tsx` shows them (Overview Documents list, Design and Plan tabs).
   - `starter.ts` / `starter-steps.ts` — projects made in Start something new keep `.protege/starter.json`
     (template, description, the shaping run, when first tried). `starterProgress()` (client-safe) works out the
     five getting-started steps from it and the project's jobs; `GettingStarted.tsx` shows them on the project page.

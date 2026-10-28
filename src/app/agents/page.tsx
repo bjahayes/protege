@@ -590,6 +590,18 @@ function RunPanel({ job, jobId, agents }: { job?: Job; jobId: string; agents: Ag
           </Link>
         )}
       </div>
+      {(() => {
+        const a = agents.find((x) => x.id === job.agentId);
+        return a?.document ? (
+          <div className="mt-3 text-[12.5px] rounded-lg border border-border bg-panel px-3 py-2">
+            It keeps <span className="font-mono">{a.document}</span>. Read it, and every version of it, under <b>Documents</b> on{" "}
+            <Link href={`/projects/${job.projectId}`} className="text-accent hover:underline">
+              {job.projectName}&apos;s Overview
+            </Link>
+            .
+          </div>
+        ) : null;
+      })()}
       <details className="mt-3 shrink-0">
         <summary className="text-[12.5px] font-medium text-muted cursor-pointer select-none">What it was asked</summary>
         <pre className="mt-2 max-h-64 overflow-y-auto whitespace-pre-wrap text-[12.5px] leading-relaxed rounded-lg border border-border bg-panel p-3 font-sans">{job.prompt}</pre>

@@ -9,7 +9,7 @@ import { getJobManager } from "./job-manager";
 import { DOC, REPORT, instructionsFor, type AgentDef } from "./agents";
 import { buildAssessmentPrompt } from "./assessment";
 import { buildPlainSummaryPrompt } from "./plain-summary";
-import { keepStartingVersion, recordVersion } from "./doc-versions";
+import { endWork, recordVersion, startWork } from "./doc-versions";
 import { isGitRepo } from "./git";
 import { execFileSync } from "child_process";
 import type { Job } from "./types";
@@ -68,8 +68,10 @@ export async function runAgent(a: AgentDef, o: RunAgentOptions): Promise<Job> {
 
   if (a.kind === "document" || a.kind === "report") {
     const doc = a.document!;
-    keepStartingVersion(o.dir, doc);
+    // Save any change made since the last version first, so the agent's version is only its own.
+    startWork(o.dir, doc);
     const onDone = (j: Job) => {
+      endWork(o.dir, doc);
       if (j.status === "done") recordVersion(o.dir, doc, { by: a.name, agentId: a.id, agentVersion: a.version, jobId: j.id });
     };
     if (a.special)

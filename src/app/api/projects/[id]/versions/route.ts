@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { projectDir, unknownProject } from "@/lib/project-guard";
-import { listVersions, readVersion, restoreVersion } from "@/lib/doc-versions";
+import { ensureVersioned, listVersions, readVersion, restoreVersion } from "@/lib/doc-versions";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,6 +19,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!safe(file)) return NextResponse.json({ error: "Bad file" }, { status: 400 });
   const n = Number(req.nextUrl.searchParams.get("n"));
   if (n) return NextResponse.json({ text: readVersion(dir, file, n) });
+  ensureVersioned(dir, file);
   return NextResponse.json({ versions: listVersions(dir, file) });
 }
 
