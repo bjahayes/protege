@@ -6,8 +6,10 @@ via the Claude Agent SDK.
 
 ## Build & run
 - Install: `npm install`
-- Dev: `npm run dev` → http://127.0.0.1:4317 (previews on 4318). Always start through the npm scripts
-  (`scripts/serve.mjs`): they create the per-install access key the request checks need.
+- Use: `npm run build` then `npm start` → http://127.0.0.1:4317 (previews on 4318). Pages load in ~0.02 s.
+- Dev: `npm run dev` shows code changes live but compiles each page on first visit (0.7–8 s); only for
+  changing Protégé. Always start through the npm scripts (`scripts/serve.mjs`): they create the
+  per-install access key the request checks need. `.claude/launch.json`: `protege` = release, `protege-dev` = dev.
 - Typecheck: `npx tsc --noEmit`
 - Tests (no model calls): `npm test` (arrow layout + Keep on a throwaway repo)
 - Build: `npm run build`

@@ -26,13 +26,18 @@ to deploy and no API key to set up.
 git clone https://github.com/bjahayes/protege.git
 cd protege
 npm install
-npm run dev
+npm run build
+npm start
 ```
 
 Then open **http://127.0.0.1:4317**.
 
-Start it with `npm run dev` (or `npm run build` then `npm start`), not `next dev` directly: the
-npm scripts set up this install's access key (see [Safety](#safety)).
+After that, `npm start` is all you need each time. Run `npm run build` again after you update
+Protégé (for example with `git pull`), so you get the new version.
+
+Start it with the npm scripts, not `next start` directly: they set up this install's access key
+(see [Safety](#safety)). If you want to change Protégé's own code, see
+[CONTRIBUTING.md](CONTRIBUTING.md) for the development server.
 
 ## What it does
 
@@ -66,7 +71,7 @@ npm scripts set up this install's access key (see [Safety](#safety)).
 
 ## Settings
 
-All optional, set as environment variables before `npm run dev`:
+All optional, set as environment variables before `npm start`:
 
 | Variable | What it does |
 | --- | --- |

@@ -13,6 +13,10 @@ npm run dev
 You need Node.js 20 or later (22.6 or later to run the tests) and Claude Code, installed and
 signed in. Open http://127.0.0.1:4317.
 
+The development server shows your code changes straight away, but it is much slower to use: it
+compiles each page the first time you open it, and again after every change, which can take a few
+seconds. To use Protégé day to day, run `npm run build` then `npm start` instead.
+
 ## Before you send a change
 
 Run the same checks CI runs:
