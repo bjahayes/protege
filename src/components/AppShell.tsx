@@ -8,6 +8,7 @@ import NotificationCenter from "./NotificationCenter";
 import CommandBar from "./CommandBar";
 import GuideHelper from "./GuideHelper";
 import SignInBanner from "./SignInBanner";
+import RestartButton from "./RestartButton";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -33,8 +34,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             </div>
           )}
           {!simple && (
-            <div className="p-3">
+            <div className="p-3 flex flex-col gap-2">
               <NotificationCenter />
+              <RestartButton />
             </div>
           )}
           <div className="px-3 py-3">

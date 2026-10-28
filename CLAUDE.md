@@ -7,6 +7,8 @@ via the Claude Agent SDK.
 ## Build & run
 - Install: `npm install`
 - Use: `npm run build` then `npm start` → http://127.0.0.1:4317 (previews on 4318). Pages load in ~0.02 s.
+  `npm start` looks after the server: `npm run restart` (or **Load latest version**) reloads it on new code
+  without cutting off sessions; builds alternate between `.next` and `.next-alt` (`data/active-build-<port>`).
 - Dev: `npm run dev` shows code changes live but compiles each page on first visit (0.7–8 s); only for
   changing Protégé. Always start through the npm scripts (`scripts/serve.mjs`): they create the
   per-install access key the request checks need. `.claude/launch.json`: `protege` = release, `protege-dev` = dev.
@@ -16,7 +18,7 @@ via the Claude Agent SDK.
   running. To try a change in a browser, build and run a separate copy:
   `PROTEGE_DIST_DIR=.next-test npx next build`, then in the background
   `PROTEGE_DIST_DIR=.next-test node scripts/serve.mjs next start -H 127.0.0.1 -p 4327` (previews on 4328); stop it
-  when done, delete `.next-test`, and put back `tsconfig.json` (the build adds `.next-test/types` to it). When the real server needs a restart to pick up a change, say so and let the person restart it.
+  when done, delete `.next-test`, and put back `tsconfig.json` (the build adds `.next-test/types` to it). To make the running Protégé load your change, run `npm run restart`: it builds the new version while the old one keeps serving, waits until no session or task is mid-turn (yours finishes its reply first), then restarts on it. Sessions carry on from their saved history. The person can do the same with **Load latest version** in the sidebar.
 - Typecheck: `npx tsc --noEmit`
 - Tests (no model calls): `npm test` (arrow layout + Keep on a throwaway repo)
 - Build: `npm run build`

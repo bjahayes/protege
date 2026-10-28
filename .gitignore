@@ -1,5 +1,6 @@
 /node_modules
 /.next
+/.next-alt
 /.next-test
 /out
 /build
