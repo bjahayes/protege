@@ -13,8 +13,7 @@ import RunForm from "@/components/RunForm";
 import AgentStream from "@/components/AgentStream";
 import StatusBadge from "@/components/StatusBadge";
 import AssessmentView from "@/components/AssessmentView";
-import PartsMap from "@/components/simple/PartsMap";
-import Mermaid from "@/components/Mermaid";
+import ProjectDiagram from "@/components/ProjectDiagram";
 import RepoMapView from "@/components/RepoMapView";
 import BrainView from "@/components/BrainView";
 import { useBrainAvailable } from "@/lib/use-brain";
@@ -264,10 +263,8 @@ function Overview({
   onGoRun: () => void;
   onGoMap: () => void;
 }) {
-  return (
-    <div className="max-w-4xl xl:max-w-none xl:grid xl:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] xl:gap-6 xl:items-start space-y-5 xl:space-y-0">
-      <div className="min-w-0 space-y-5">
-      {assessment && <AssessmentSummary a={assessment} onGoMap={onGoMap} />}
+  const facts = (
+    <div className="min-w-0 space-y-5">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Stat label="To do" value={project.tasks.todo} color="text-text" />
         <Stat label="In progress" value={project.tasks.doing} color="text-running" />
@@ -297,18 +294,6 @@ function Overview({
         </div>
       </section>
 
-      </div>
-
-      <div className="min-w-0 space-y-5">
-      {assessment?.components?.length ? (
-        <section>
-          <h2 className="text-sm font-semibold text-muted mb-2">How it fits together</h2>
-          <div className="rounded-xl border border-border bg-panel p-5">
-            <PartsMap assessment={assessment} />
-          </div>
-        </section>
-      ) : null}
-
       {jobs.length > 0 && (
         <section>
           <h2 className="text-sm font-semibold text-muted mb-2">Recent agent runs</h2>
@@ -328,18 +313,26 @@ function Overview({
       )}
 
       {project.exists && <CheckpointsPanel projectId={projectId} onRestore={onReload} />}
-      </div>
+    </div>
+  );
 
-      {/* Across both columns, so the flowchart shows whole at a readable size. */}
-      {assessment?.architecture?.mermaid ? (
-        <section className="min-w-0 xl:col-span-2">
-          <h2 className="text-sm font-semibold text-muted mb-2">Flowchart</h2>
-          {assessment.architecture.description && (
-            <p className="text-[12.5px] text-muted mb-2 leading-relaxed max-w-prose">{assessment.architecture.description}</p>
-          )}
-          <Mermaid chart={assessment.architecture.mermaid} />
-        </section>
-      ) : null}
+  // Two bands: what the project is beside where it's up to and what has happened in it, then how
+  // it fits together (one diagram, full width).
+  return (
+    <div className="space-y-7">
+      {assessment ? (
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 xl:gap-6 items-start">
+          <div className="min-w-0">
+            <AssessmentSummary a={assessment} onGoMap={onGoMap} />
+          </div>
+          {facts}
+        </div>
+      ) : (
+        facts
+      )}
+
+      {assessment && <ProjectDiagram assessment={assessment} />}
+
     </div>
   );
 }

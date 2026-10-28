@@ -4,8 +4,7 @@ import { apiFetch } from "@/lib/api-client";
 import { useState } from "react";
 import type { Assessment, ComponentInfo } from "@/lib/assessment";
 import { timeAgo } from "@/lib/format";
-import Mermaid from "./Mermaid";
-import PartsMap from "./simple/PartsMap";
+import ProjectDiagram from "./ProjectDiagram";
 import { PART_STATUS, partReason } from "@/lib/live-build";
 
 const STATUS_STYLE: Record<string, string> = {
@@ -114,22 +113,8 @@ export default function AssessmentView({
       {/* Plan drift banner */}
       <PlanDrift a={a} hasPlan={hasPlan} savingPlan={savingPlan} savedPlan={savedPlan} onSave={savePlan} />
 
-      {/* How it fits together (the same parts diagram as the simple view) */}
-      {a.components?.length > 0 && (
-        <section>
-          <h3 className="text-sm font-semibold text-muted mb-2">How it fits together</h3>
-          {a.architecture?.description && <p className="text-sm text-muted mb-3">{a.architecture.description}</p>}
-          <div className="rounded-xl border border-border bg-panel p-5">
-            <PartsMap assessment={a} />
-          </div>
-          {a.architecture?.mermaid && (
-            <>
-              <h3 className="text-sm font-semibold text-muted mt-5 mb-2">Flowchart</h3>
-              <Mermaid chart={a.architecture.mermaid} />
-            </>
-          )}
-        </section>
-      )}
+      {/* How it fits together: parts or flowchart, the same as on the Overview */}
+      <ProjectDiagram assessment={a} heading="h3" />
 
       {/* Components */}
       {a.components?.length > 0 && (
