@@ -4,8 +4,6 @@ import os from "os";
 export const APP_PORT = 4317;
 export const DATA_DIR = path.join(process.cwd(), "data");
 export const DB_PATH = path.join(DATA_DIR, "protege.db");
-/** The database's name before the rename; moved to DB_PATH on start-up. */
-export const OLD_DB_PATH = path.join(DATA_DIR, "buildwork.db");
 
 /** Where newly-created (not discovered) projects live. Friendly, findable, in the user's home. */
 export const PROJECTS_ROOT = path.join(os.homedir(), "Protégé Projects");

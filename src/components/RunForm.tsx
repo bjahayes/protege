@@ -42,7 +42,7 @@ const TEMPLATES: { key: string; label: string; hint: string; permission: string;
     hint: "Where is this up to?",
     permission: "acceptEdits",
     prompt:
-      "Summarize where this project is currently up to: what's built, what's in progress, and what remains. Base it on the code, DESIGN.md, PLAN.md and the task list (.protege/tasks.json, or .protege/tasks.json in projects set up before the rename). Write the summary to .protege/status.md.",
+      "Summarize where this project is currently up to: what's built, what's in progress, and what remains. Base it on the code, DESIGN.md, PLAN.md and the task list (.protege/tasks.json). Write the summary to .protege/status.md.",
   },
   {
     key: "free",
@@ -172,7 +172,7 @@ export default function RunForm({ projectId, gitRepo, resume, onClearResume, onL
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
         <Field label="Model">
-          <select value={model} onChange={(e) => setModel(e.target.value)} className="bw-select">
+          <select value={model} onChange={(e) => setModel(e.target.value)} className="protege-select">
             {MODELS.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.label}
@@ -181,7 +181,7 @@ export default function RunForm({ projectId, gitRepo, resume, onClearResume, onL
           </select>
         </Field>
         <Field label="Permission">
-          <select value={permission} onChange={(e) => setPermission(e.target.value)} className="bw-select">
+          <select value={permission} onChange={(e) => setPermission(e.target.value)} className="protege-select">
             <option value="plan">plan (read-only)</option>
             <option value="default">default (ask)</option>
             <option value="acceptEdits">acceptEdits</option>
@@ -189,7 +189,7 @@ export default function RunForm({ projectId, gitRepo, resume, onClearResume, onL
           </select>
         </Field>
         <Field label="Effort">
-          <select value={effort} onChange={(e) => setEffort(e.target.value)} className="bw-select">
+          <select value={effort} onChange={(e) => setEffort(e.target.value)} className="protege-select">
             <option value="">default</option>
             <option value="low">low</option>
             <option value="medium">medium</option>
@@ -201,7 +201,7 @@ export default function RunForm({ projectId, gitRepo, resume, onClearResume, onL
             value={maxTurns}
             onChange={(e) => setMaxTurns(e.target.value.replace(/[^0-9]/g, ""))}
             placeholder="∞"
-            className="bw-select"
+            className="protege-select"
           />
         </Field>
       </div>
@@ -290,7 +290,7 @@ export default function RunForm({ projectId, gitRepo, resume, onClearResume, onL
       </div>
 
       <style jsx>{`
-        :global(.bw-select) {
+        :global(.protege-select) {
           width: 100%;
           padding: 0.4rem 0.5rem;
           border-radius: 0.5rem;
@@ -299,7 +299,7 @@ export default function RunForm({ projectId, gitRepo, resume, onClearResume, onL
           font-size: 0.8rem;
           color: #e6e9ee;
         }
-        :global(.bw-select:focus) {
+        :global(.protege-select:focus) {
           outline: none;
           border-color: rgba(91, 157, 255, 0.6);
         }

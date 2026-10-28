@@ -16,10 +16,10 @@ export default function SimpleHome() {
   const [welcomed, setWelcomed] = useState(true);
 
   useEffect(() => {
-    setWelcomed(localStorage.getItem("bw_simple_welcomed") === "1");
+    setWelcomed(localStorage.getItem("protege_simple_welcomed") === "1");
   }, []);
   const dismissWelcome = () => {
-    localStorage.setItem("bw_simple_welcomed", "1");
+    localStorage.setItem("protege_simple_welcomed", "1");
     setWelcomed(true);
   };
 

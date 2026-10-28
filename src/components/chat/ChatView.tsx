@@ -756,9 +756,9 @@ export default function ChatView({
   const stick = useRef(true);
 
   useEffect(() => {
-    setMode(pref("bw.chat.mode", "default"));
-    setModel(pref("bw.chat.model", ""));
-    setEffort(pref("bw.chat.effort", ""));
+    setMode(pref("protege.chat.mode", "default"));
+    setModel(pref("protege.chat.model", ""));
+    setEffort(pref("protege.chat.effort", ""));
     apiFetch("/api/chat/models", { cache: "no-store" })
       .then((r) => r.json())
       .then((d) => setModels(d.models || []))
@@ -960,7 +960,7 @@ export default function ChatView({
   const changeEffort = useCallback(
     (v: string) => {
       setEffort(v);
-      savePref("bw.chat.effort", v);
+      savePref("protege.chat.effort", v);
       if (isLive()) act({ action: "effort", value: v });
     },
     [act]
@@ -968,7 +968,7 @@ export default function ChatView({
   const changeMode = useCallback(
     (v: string) => {
       setMode(v);
-      savePref("bw.chat.mode", v);
+      savePref("protege.chat.mode", v);
       if (isLive()) act({ action: "mode", value: v });
     },
     [act]
@@ -976,7 +976,7 @@ export default function ChatView({
   const changeModel = useCallback(
     (v: string) => {
       setModel(v);
-      savePref("bw.chat.model", v);
+      savePref("protege.chat.model", v);
       if (isLive()) act({ action: "model", value: v === "default" ? "" : v });
       // Keep the effort only if the new model offers it.
       const { models, effort } = prefsRef.current;

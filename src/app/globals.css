@@ -82,16 +82,16 @@ body {
 .tx-md hr { border: 0; border-top: 1px solid #262d38; margin: 0.7rem 0; }
 
 /* Simple view: live build visuals (parts map wires, glowing parts) */
-@keyframes bw-flow { to { stroke-dashoffset: -11; } }
-.bw-wire-hot { stroke-dasharray: 6 5; animation: bw-flow 1s linear infinite; }
-@keyframes bw-glow {
+@keyframes protege-flow { to { stroke-dashoffset: -11; } }
+.protege-wire-hot { stroke-dasharray: 6 5; animation: protege-flow 1s linear infinite; }
+@keyframes protege-glow {
   0%, 100% { box-shadow: 0 0 0 3px rgba(91, 157, 255, 0.25); }
   50% { box-shadow: 0 0 0 6px rgba(91, 157, 255, 0.08); }
 }
-.bw-glow { animation: bw-glow 1.6s ease-in-out infinite; }
-.bw-wire-label { paint-order: stroke; stroke: #141820; stroke-width: 4px; stroke-linejoin: round; }
+.protege-glow { animation: protege-glow 1.6s ease-in-out infinite; }
+.protege-wire-label { paint-order: stroke; stroke: #141820; stroke-width: 4px; stroke-linejoin: round; }
 @media (prefers-reduced-motion: reduce) {
-  .bw-wire-hot, .bw-glow, .live-dot { animation: none; }
+  .protege-wire-hot, .protege-glow, .live-dot { animation: none; }
 }
 
 /* Chat replies keep Claude's line breaks, as Claude desktop shows them. */

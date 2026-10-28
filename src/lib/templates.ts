@@ -7,9 +7,9 @@ import { registerProject } from "./store";
 // The dev server may have been launched with a reduced PATH that doesn't include
 // Git. Resolve a working `git` once (bare name first, then common Windows spots)
 // so project creation still gets a repo (needed for undo/isolation).
-const g = globalThis as unknown as { __bwGitExe?: string | null };
+const g = globalThis as unknown as { __protegeGitExe?: string | null };
 export function resolveGit(): string | null {
-  if (g.__bwGitExe !== undefined) return g.__bwGitExe;
+  if (g.__protegeGitExe !== undefined) return g.__protegeGitExe;
   const candidates = [
     "git",
     process.env.GIT,
@@ -21,13 +21,13 @@ export function resolveGit(): string | null {
   for (const c of candidates) {
     try {
       execFileSync(c, ["--version"], { stdio: "ignore" });
-      g.__bwGitExe = c;
+      g.__protegeGitExe = c;
       return c;
     } catch {
       /* try next */
     }
   }
-  g.__bwGitExe = null;
+  g.__protegeGitExe = null;
   return null;
 }
 

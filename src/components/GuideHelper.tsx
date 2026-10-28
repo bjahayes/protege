@@ -76,8 +76,8 @@ export default function GuideHelper() {
   const answerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setOpen(localStorage.getItem("bw_guide_collapsed") !== "1");
-    setDemo(localStorage.getItem("bw_demo") === "1");
+    setOpen(localStorage.getItem("protege_guide_collapsed") !== "1");
+    setDemo(localStorage.getItem("protege_demo") === "1");
     setReady(true);
   }, []);
 
@@ -91,11 +91,11 @@ export default function GuideHelper() {
   if (!ready) return null;
 
   const collapse = () => {
-    localStorage.setItem("bw_guide_collapsed", "1");
+    localStorage.setItem("protege_guide_collapsed", "1");
     setOpen(false);
   };
   const expand = () => {
-    localStorage.setItem("bw_guide_collapsed", "0");
+    localStorage.setItem("protege_guide_collapsed", "0");
     setOpen(true);
   };
 

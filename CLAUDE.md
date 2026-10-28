@@ -23,7 +23,7 @@ via the Claude Agent SDK.
   the API only through `apiFetch` (`src/lib/api-client.ts`). Routes turn project ids into folders only
   through `projectDir` (`src/lib/project-guard.ts`, known projects only). Previews come from
   `src/lib/preview-server.ts` on their own port, started in `src/instrumentation.ts`.
-- Git: `src/lib/git.ts`. Protégé's notes (`.protege/`, old `.buildwork/`) are in `.git/info/exclude`
+- Git: `src/lib/git.ts`. Protégé's notes (`.protege/`) are in `.git/info/exclude`
   and copied into and back out of safe copies; direct runs save the files they changed; Keep offers
   "save them first" when the project has unsaved changes.
 - `src/lib/` — server-only modules:

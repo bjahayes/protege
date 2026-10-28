@@ -147,7 +147,7 @@ export function SimpleReview({
     return <div className="rounded-2xl border border-border bg-panel p-6 text-muted text-sm">The changes were thrown away — nothing was kept.</div>;
 
   // Hide internal metadata (the checklist file etc.) — show only real content changes.
-  const files = (diff?.files || []).filter((f) => !/^\.(protege|buildwork)\//.test(f.path.replace(/\\/g, "/")));
+  const files = (diff?.files || []).filter((f) => !/^\.protege\//.test(f.path.replace(/\\/g, "/")));
   return (
     <div className="rounded-2xl border border-border bg-panel p-6">
       <div className="text-base font-medium mb-1">Protégé made some changes</div>

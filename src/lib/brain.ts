@@ -8,7 +8,6 @@ import matter from "gray-matter";
 export function brainDir(): string {
   return (
     process.env.PROTEGE_BRAIN_DIR ||
-    process.env.BUILDWORK_BRAIN_DIR || // the name before the rename
     path.join(os.homedir(), "brainchild", "data", "brain")
   );
 }

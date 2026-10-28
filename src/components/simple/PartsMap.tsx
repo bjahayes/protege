@@ -133,10 +133,10 @@ export default function PartsMap({ assessment, changing }: { assessment: Assessm
         >
           {wires.map((w, i) => (
             <g key={i}>
-              <path d={w.d} fill="none" className={w.hot ? "stroke-accent bw-wire-hot" : "stroke-muted"} strokeWidth={w.hot ? 2 : 1.4} opacity={w.hot ? 1 : 0.7} />
+              <path d={w.d} fill="none" className={w.hot ? "stroke-accent protege-wire-hot" : "stroke-muted"} strokeWidth={w.hot ? 2 : 1.4} opacity={w.hot ? 1 : 0.7} />
               <polygon points={w.ah} className={w.hot ? "fill-accent" : "fill-muted"} />
               {w.label && (
-                <text x={w.lx} y={w.ly} textAnchor="middle" className={`bw-wire-label text-[11px] ${w.hot ? "fill-accent" : "fill-muted"}`}>
+                <text x={w.lx} y={w.ly} textAnchor="middle" className={`protege-wire-label text-[11px] ${w.hot ? "fill-accent" : "fill-muted"}`}>
                   {w.label}
                 </text>
               )}
@@ -166,7 +166,7 @@ export default function PartsMap({ assessment, changing }: { assessment: Assessm
                       onClick={() => setSel((s) => (s === c.name ? null : c.name))}
                       aria-pressed={sel === c.name}
                       className={`flex-1 basis-[150px] max-w-[230px] min-w-0 text-left rounded-xl border-[1.5px] px-3 py-2.5 flex flex-col gap-1 transition-colors hover:border-accent/50 ${
-                        ch ? "border-accent bg-panel bw-glow" : `${TONE_BORDER[st.tone]} ${st.dashed ? "border-dashed bg-transparent" : "bg-panel"}`
+                        ch ? "border-accent bg-panel protege-glow" : `${TONE_BORDER[st.tone]} ${st.dashed ? "border-dashed bg-transparent" : "bg-panel"}`
                       } ${sel === c.name ? "ring-2 ring-text/70 ring-offset-2 ring-offset-bg" : ""}`}
                     >
                       <span className="font-semibold text-[13.5px] leading-snug">{c.name}</span>

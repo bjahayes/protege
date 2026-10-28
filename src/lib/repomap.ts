@@ -25,7 +25,7 @@ export interface RepoMap {
 
 const IGNORE_DIRS = new Set([
   "node_modules", ".git", ".next", "dist", "build", "out", "coverage", "vendor",
-  "__pycache__", ".venv", "venv", ".protege", ".protege", ".turbo", "target", "bin", "obj", ".cache",
+  "__pycache__", ".venv", "venv", ".protege", ".turbo", "target", "bin", "obj", ".cache",
 ]);
 const EXT_LANG: Record<string, string> = {
   ".ts": "ts", ".tsx": "ts", ".mts": "ts", ".cts": "ts",

@@ -24,9 +24,9 @@ import { query as sdkQuery, type Options, type Query, type SDKUserMessage } from
 export type { Options, PermissionMode } from "@anthropic-ai/claude-agent-sdk";
 
 export type EngineName = "cli" | "sdk";
-/** A setting: PROTEGE_<name>, or BUILDWORK_<name> from before the rename. */
+/** A setting from the environment: PROTEGE_<name>. */
 function setting(name: string): string | undefined {
-  return process.env[`PROTEGE_${name}`] ?? process.env[`BUILDWORK_${name}`];
+  return process.env[`PROTEGE_${name}`];
 }
 export const ENGINE: EngineName = (setting("ENGINE") || "cli").toLowerCase() === "sdk" ? "sdk" : "cli";
 export const ALLOW_API_KEY = setting("ALLOW_API_KEY") === "1";

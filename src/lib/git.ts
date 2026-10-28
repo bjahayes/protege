@@ -89,10 +89,10 @@ export async function saveChanges(dir: string, message: string, paths?: string[]
   return true;
 }
 
-const META_DIRS = [".protege", ".buildwork"];
+const META_DIRS = [".protege"];
 
 /**
- * Keep Protégé's own notes (.protege/, and .buildwork/ from before the rename) out of git's
+ * Keep Protégé's own notes (.protege/) out of git's
  * view of the project, via the repository's local ignore list (.git/info/exclude, which is
  * never committed or shared). Then a note Protégé writes never counts as an unsaved change
  * that blocks keeping a change. Notes a project already tracks in git are left as they are.

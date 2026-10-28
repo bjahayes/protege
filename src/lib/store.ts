@@ -1,17 +1,13 @@
 import Database from "better-sqlite3";
 import fs from "fs";
-import { DATA_DIR, DB_PATH, OLD_DB_PATH } from "./config";
+import { DATA_DIR, DB_PATH } from "./config";
 
 // Reuse across HMR reloads in dev.
-const g = globalThis as unknown as { __bwDb?: Database.Database };
+const g = globalThis as unknown as { __protegeDb?: Database.Database };
 
 export function getDb(): Database.Database {
-  if (g.__bwDb) return g.__bwDb;
+  if (g.__protegeDb) return g.__protegeDb;
   fs.mkdirSync(DATA_DIR, { recursive: true });
-  // Keep the history of an install from before the rename.
-  if (!fs.existsSync(DB_PATH) && fs.existsSync(OLD_DB_PATH)) {
-    for (const ext of ["", "-wal", "-shm"]) if (fs.existsSync(OLD_DB_PATH + ext)) fs.renameSync(OLD_DB_PATH + ext, DB_PATH + ext);
-  }
   const db = new Database(DB_PATH);
   db.pragma("journal_mode = WAL");
   db.exec(`
@@ -74,7 +70,7 @@ export function getDb(): Database.Database {
   addCol("eval_reason", "TEXT");
   addCol("checks_passed", "INTEGER");
   addCol("checks_command", "TEXT");
-  g.__bwDb = db;
+  g.__protegeDb = db;
   return db;
 }
 

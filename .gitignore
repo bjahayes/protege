@@ -11,6 +11,5 @@ next-env.d.ts
 
 # Local working folders: old code copies, Protégé's notes about this folder, editor settings.
 /.backup
-/.buildwork
 /.protege
 /.claude

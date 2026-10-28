@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   // Demo mode swaps in made-up projects so nobody sees real work while exploring.
-  if (req.cookies.get("bw_demo")?.value === "1") {
+  if (req.cookies.get("protege_demo")?.value === "1") {
     return NextResponse.json({ projects: demoSummaries(), demo: true });
   }
   const projects = await discoverProjects();

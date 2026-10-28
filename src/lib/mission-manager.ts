@@ -159,8 +159,8 @@ class MissionManager {
   }
 }
 
-const g = globalThis as unknown as { __bwMissionManager?: MissionManager };
+const g = globalThis as unknown as { __protegeMissionManager?: MissionManager };
 export function getMissionManager(): MissionManager {
-  if (!g.__bwMissionManager) g.__bwMissionManager = new MissionManager();
-  return g.__bwMissionManager;
+  if (!g.__protegeMissionManager) g.__protegeMissionManager = new MissionManager();
+  return g.__protegeMissionManager;
 }

@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Job } from "@/lib/types";
 
 const NOTIFY_STATES = new Set(["done", "error", "idle"]);
-const LS_KEY = "bw_notify_enabled";
+const LS_KEY = "protege_notify_enabled";
 
 export default function NotificationCenter() {
   const [supported, setSupported] = useState(false);

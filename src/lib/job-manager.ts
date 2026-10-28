@@ -758,11 +758,11 @@ function safeParse(s: string) {
   }
 }
 
-const g = globalThis as unknown as { __bwJobManager?: JobManager };
+const g = globalThis as unknown as { __protegeJobManager?: JobManager };
 export function getJobManager(): JobManager {
-  if (!g.__bwJobManager) g.__bwJobManager = new JobManager();
+  if (!g.__protegeJobManager) g.__protegeJobManager = new JobManager();
   // After a hot reload in development the kept instance belongs to the old class; give it the
   // new methods without dropping the jobs it is running.
-  else if (!(g.__bwJobManager instanceof JobManager)) Object.setPrototypeOf(g.__bwJobManager, JobManager.prototype);
-  return g.__bwJobManager;
+  else if (!(g.__protegeJobManager instanceof JobManager)) Object.setPrototypeOf(g.__protegeJobManager, JobManager.prototype);
+  return g.__protegeJobManager;
 }
