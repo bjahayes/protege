@@ -7,6 +7,7 @@ import { readDocsMeta } from "./docs";
 import { plainSummaryExcerpt } from "./plain-summary";
 import { readAssessment } from "./assessment";
 import { getJobManager } from "./job-manager";
+import { knownFolders } from "./known-folders";
 import type { ProjectSummary, SessionInfo } from "./types";
 
 interface CwdAgg {
@@ -54,11 +55,20 @@ export async function discoverProjects(): Promise<ProjectSummary[]> {
     byCwd.set(cwd, e);
   }
 
+  // Folders Claude Code or Claude desktop has been used in whose sessions are gone.
+  const key = (p: string) => (process.platform === "win32" ? path.resolve(p).toLowerCase() : path.resolve(p));
+  const seen = new Set([...byCwd.keys()].map(key));
+  for (const f of knownFolders()) {
+    if (seen.has(key(f.path))) continue;
+    seen.add(key(f.path));
+    byCwd.set(f.path, { count: 0, last: f.last });
+  }
+
   const db = getDb();
   const registered = db.prepare(`SELECT * FROM projects`).all() as any[];
   const regByPath = new Map(registered.map((r) => [r.path, r]));
   for (const r of registered) {
-    if (!byCwd.has(r.path)) {
+    if (!seen.has(key(r.path))) {
       byCwd.set(r.path, { count: 0, last: r.last_seen ?? 0 });
     }
   }

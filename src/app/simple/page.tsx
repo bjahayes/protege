@@ -129,7 +129,7 @@ export default function SimpleHome() {
         <div className="text-muted text-sm py-16 text-center">Loading…</div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {filtered.slice(0, 40).map((p) => {
+          {filtered.map((p) => {
             const active = p.liveAgents > 0 || (p.lastActivity != null && Date.now() - p.lastActivity < 3 * 60 * 1000);
             return (
               <Link

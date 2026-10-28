@@ -19,25 +19,53 @@ interface ProjectCost {
   lastRun: number;
 }
 interface CostData {
+  since: number;
+  firstRun: number | null;
   totals: { runs: number; cost: number; inputTokens: number; outputTokens: number };
   byProject: ProjectCost[];
   byKind: { kind: string; runs: number; cost: number }[];
   byModel: { model: string; runs: number; cost: number }[];
 }
 
+type Period = "session" | "week" | "all";
+const WINDOW_HOURS = { session: 5, week: 7 * 24 };
+
+/** When a plan window began: its reset time minus its length. */
+function windowStart(plan: PlanUsage | null, w: "session" | "week"): number | null {
+  const l = plan?.limits.find((x) => x.window === w);
+  const t = l?.resetsAt ? Date.parse(l.resetsAt) : NaN;
+  return isNaN(t) ? null : t - WINDOW_HOURS[w] * 3_600_000;
+}
+
+function whenText(ms: number): string {
+  const d = new Date(ms);
+  const time = d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  if (Date.now() - ms < 20 * 3_600_000 && d.getDate() === new Date().getDate()) return time;
+  return `${d.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })}, ${time}`;
+}
+
 export default function CostsPage() {
   const [data, setData] = useState<CostData | null>(null);
+  const [period, setPeriod] = useState<Period>("session");
   const [plan, setPlan] = useState<PlanUsage | null>(null);
   const [checking, setChecking] = useState(false);
 
+  const sessionStart = windowStart(plan, "session");
+  const weekStart = windowStart(plan, "week");
+  const since = period === "session" ? sessionStart : period === "week" ? weekStart : 0;
   const load = useCallback(async () => {
+    if (since === null) return; // the plan windows aren't known yet
     try {
-      const r = await apiFetch("/api/costs", { cache: "no-store" });
+      const r = await apiFetch(`/api/costs?since=${Math.floor(since)}`, { cache: "no-store" });
       setData(await r.json());
     } catch {
       /* ignore */
     }
-  }, []);
+  }, [since]);
+  // Without plan limits there are no windows to match, so show all of Protégé's runs.
+  useEffect(() => {
+    if (plan && (!plan.available || (sessionStart === null && weekStart === null))) setPeriod("all");
+  }, [plan, sessionStart, weekStart]);
 
   const loadPlan = useCallback(async (fresh = false) => {
     setChecking(true);
@@ -100,10 +128,35 @@ export default function CostsPage() {
         </section>
       )}
 
-      <h2 className="text-sm font-semibold text-muted mb-1">Protégé&apos;s own runs</h2>
+      <div className="flex items-end justify-between gap-3 flex-wrap mb-1">
+        <h2 className="text-sm font-semibold text-muted">Protégé&apos;s own runs</h2>
+        <div className="flex rounded-lg border border-border overflow-hidden text-[12px]">
+          {(
+            [
+              ["session", "This session", sessionStart],
+              ["week", "This week", weekStart],
+              ["all", "All time", 0],
+            ] as [Period, string, number | null][]
+          ).map(([k, label, start]) => (
+            <button
+              key={k}
+              onClick={() => setPeriod(k)}
+              disabled={start === null}
+              className={`px-3 py-1 ${period === k ? "bg-panel-2 text-text" : "text-muted hover:text-text"} disabled:opacity-40`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
       <p className="text-[12px] text-muted mb-3">
-        Every task Protégé has run, with its cost at API prices as Claude Code reports it. On a Claude plan they count toward the
-        limits above instead of being billed.
+        {period === "session" && sessionStart
+          ? `The tasks Protégé has run since your current session's limit began, at ${whenText(sessionStart)}. `
+          : period === "week" && weekStart
+            ? `The tasks Protégé has run since this week's limit began, on ${whenText(weekStart)}. `
+            : `Every task Protégé has run${data?.firstRun ? `, since the first on ${new Date(data.firstRun).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}` : ""}. `}
+        Costs are at API prices, as Claude Code reports them; on a Claude plan these runs count toward the limits above instead of
+        being billed.
       </p>
 
       {!data ? (

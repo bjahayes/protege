@@ -2,7 +2,8 @@
 //
 // A project id is just the folder path, encoded, so on its own it could name any folder on the
 // computer. projectDir only returns the folder if it is a project Protégé knows: one you
-// registered, one Claude Code has been used in (from its saved sessions), or a demo project.
+// registered, one Claude Code has been used in (from its saved sessions, its settings file or
+// Claude desktop's records), or a demo project.
 // Anything else is "unknown project", so no route can be pointed at an arbitrary folder.
 
 import path from "path";
@@ -10,6 +11,7 @@ import { NextResponse } from "next/server";
 import { listSessions } from "@anthropic-ai/claude-agent-sdk";
 import { isNoisePath, pathFromProjectId } from "./config";
 import { getDb } from "./store";
+import { knownFolders } from "./known-folders";
 import { isDemoId, materializeDemo } from "./demo";
 
 const norm = (p: string) => {
@@ -31,6 +33,7 @@ async function discoveredPaths(fresh: boolean): Promise<Set<string>> {
   }
   const set = new Set<string>();
   for (const s of sessions) if (s.cwd && !isNoisePath(s.cwd)) set.add(norm(s.cwd));
+  for (const f of knownFolders()) set.add(norm(f.path));
   discovered = { at: Date.now(), set };
   return set;
 }

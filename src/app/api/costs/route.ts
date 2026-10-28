@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/store";
 import { projectIdFromPath } from "@/lib/config";
 import path from "path";
@@ -6,8 +6,12 @@ import path from "path";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+// Protégé's own runs, totalled. ?since=<ms> counts only runs started since then (the Usage page
+// passes when the plan's session or week limit last reset).
+export async function GET(req: NextRequest) {
   const db = getDb();
+  const since = Math.max(0, Number(req.nextUrl.searchParams.get("since")) || 0);
+  const first = (db.prepare(`SELECT MIN(started_at) AS t FROM jobs`).get() as any)?.t ?? null;
 
   const totals = db
     .prepare(
@@ -15,9 +19,9 @@ export async function GET() {
               COALESCE(SUM(cost_usd),0) AS cost,
               COALESCE(SUM(input_tokens),0) AS inTok,
               COALESCE(SUM(output_tokens),0) AS outTok
-       FROM jobs`
+       FROM jobs WHERE started_at >= @since`
     )
-    .get() as any;
+    .get({ since }) as any;
 
   const byProject = db
     .prepare(
@@ -27,24 +31,26 @@ export async function GET() {
               COALESCE(SUM(input_tokens),0) AS inTok,
               COALESCE(SUM(output_tokens),0) AS outTok,
               MAX(started_at) AS lastRun
-       FROM jobs
+       FROM jobs WHERE started_at >= @since
        GROUP BY project_path
        ORDER BY cost DESC`
     )
-    .all() as any[];
+    .all({ since }) as any[];
 
   const byKind = db
-    .prepare(`SELECT kind, COUNT(*) AS runs, COALESCE(SUM(cost_usd),0) AS cost FROM jobs GROUP BY kind`)
-    .all() as any[];
+    .prepare(`SELECT kind, COUNT(*) AS runs, COALESCE(SUM(cost_usd),0) AS cost FROM jobs WHERE started_at >= @since GROUP BY kind`)
+    .all({ since }) as any[];
 
   const byModel = db
     .prepare(
       `SELECT COALESCE(model,'(default)') AS model, COUNT(*) AS runs, COALESCE(SUM(cost_usd),0) AS cost
-       FROM jobs GROUP BY model ORDER BY cost DESC`
+       FROM jobs WHERE started_at >= @since GROUP BY model ORDER BY cost DESC`
     )
-    .all() as any[];
+    .all({ since }) as any[];
 
   return NextResponse.json({
+    since,
+    firstRun: first,
     totals: {
       runs: totals.runs,
       cost: totals.cost,

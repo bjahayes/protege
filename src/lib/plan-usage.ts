@@ -14,6 +14,8 @@ export interface UsageLimit {
   label: string;
   percent: number;
   resetsAt: string | null;
+  /** The plan-wide windows: the current session (5 hours) and the current week (7 days). */
+  window?: "session" | "week";
 }
 
 export interface UsageActivity {
@@ -56,19 +58,24 @@ function limitsFrom(r: any): UsageLimit[] {
   if (Array.isArray(r?.limits) && r.limits.length) {
     return r.limits
       .filter((l: any) => typeof l.percent === "number")
-      .map((l: any) => ({ label: limitLabel(l), percent: l.percent, resetsAt: l.resets_at || null }));
+      .map((l: any) => ({
+        label: limitLabel(l),
+        percent: l.percent,
+        resetsAt: l.resets_at || null,
+        window: l.kind === "session" ? "session" : l.kind === "weekly_all" ? "week" : undefined,
+      }));
   }
   // Older shape: one field per window.
-  const windows: [string, string][] = [
-    ["five_hour", "Current session"],
-    ["seven_day", "Current week (all models)"],
+  const windows: [string, string, ("session" | "week")?][] = [
+    ["five_hour", "Current session", "session"],
+    ["seven_day", "Current week (all models)", "week"],
     ["seven_day_opus", "Current week (Opus)"],
     ["seven_day_sonnet", "Current week (Sonnet)"],
   ];
   const out: UsageLimit[] = [];
-  for (const [k, label] of windows) {
+  for (const [k, label, window] of windows) {
     const w = r?.[k];
-    if (w && typeof w.utilization === "number") out.push({ label, percent: w.utilization, resetsAt: w.resets_at || null });
+    if (w && typeof w.utilization === "number") out.push({ label, percent: w.utilization, resetsAt: w.resets_at || null, window });
   }
   for (const m of r?.model_scoped || [])
     if (typeof m.utilization === "number") out.push({ label: `Current week (${m.display_name})`, percent: m.utilization, resetsAt: m.resets_at || null });
