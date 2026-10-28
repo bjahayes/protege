@@ -114,6 +114,21 @@ export default function ProjectDetail({ params }: { params: Promise<{ id: string
             </div>
             <div className="text-[11px] text-muted font-mono truncate mt-0.5">{project.path}</div>
           </div>
+          {/* What you can do here: at the top, on every tab */}
+          <div className="flex items-center gap-2 shrink-0 ml-auto">
+            <Link
+              href={`/assistant?project=${id}`}
+              className="px-3 py-1.5 rounded-lg border border-border text-muted text-sm hover:text-text hover:border-accent/40"
+            >
+              ✧ Ask a question
+            </Link>
+            <button
+              onClick={() => setTab("run")}
+              className="px-3 py-1.5 rounded-lg bg-accent/15 border border-accent/30 text-accent text-sm hover:bg-accent/25"
+            >
+              ▶ Run an agent
+            </button>
+          </div>
           <div className="text-right text-[11px] text-muted shrink-0">
             <div>{project.sessionCount} sessions</div>
             <div>last active {timeAgo(project.lastActivity)}</div>
@@ -261,15 +276,6 @@ function Overview({
         <DocFlag on={project.hasDesign} label="DESIGN.md" />
         <DocFlag on={project.hasPlan} label="PLAN.md" />
         <DocFlag on={project.hasClaudeMd} label="CLAUDE.md" />
-        <Link
-          href={`/assistant?project=${projectId}`}
-          className="ml-auto px-3 py-1.5 rounded-lg border border-border text-muted text-sm hover:text-text hover:border-accent/40"
-        >
-          ✧ Ask
-        </Link>
-        <button onClick={onGoRun} className="px-3 py-1.5 rounded-lg bg-accent/15 border border-accent/30 text-accent text-sm hover:bg-accent/25">
-          ▶ Run an agent
-        </button>
       </div>
 
       <section>

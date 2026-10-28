@@ -134,107 +134,9 @@ export default function SimpleProject({ params }: { params: Promise<{ id: string
         )}
       </div>
 
-      {/* Two columns on wide screens: what it is and what's happening on the left; the parts
-          diagram, actions and history on the right. One column, in the same order, otherwise. */}
-      <div className="xl:grid xl:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] xl:gap-8 xl:items-start">
-      <div className="min-w-0">
-      {/* Where it's up to — in plain English */}
-      <section className="mt-5">
-        <h2 className="text-sm font-semibold text-muted mb-2">In plain English</h2>
-        {plainSummary ? (
-          <div className="rounded-2xl border border-border bg-panel p-5">
-            <div className="prose-bw simple-summary">
-              <MarkdownView content={plainSummary} />
-            </div>
-            <ProgressBlock tasks={tasks} phase={assessment?.phase} onDoNext={doNext} />
-            {!demo && (
-              <button
-                onClick={createSummary}
-                disabled={busy || !!runningJob}
-                className="mt-4 text-xs text-muted hover:text-text disabled:opacity-50"
-              >
-                ↻ Refresh this summary
-              </button>
-            )}
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-border bg-panel p-6 text-center">
-            <div className="text-3xl mb-2">📄</div>
-            <p className="text-sm text-muted mb-3 max-w-md mx-auto">
-              There isn&apos;t a plain-English summary of this project yet. Protégé can read it and write one
-              for you — no jargon.
-            </p>
-            <button
-              onClick={createSummary}
-              disabled={busy || !!runningJob}
-              className="px-4 py-2 rounded-xl bg-accent/20 border border-accent/40 text-accent hover:bg-accent/30 text-sm font-semibold disabled:opacity-50"
-            >
-              {busy ? "Starting…" : "Write a plain-English summary"}
-            </button>
-            <p className="text-[11px] text-muted mt-2">Takes a minute or two.</p>
-          </div>
-        )}
-      </section>
-
-      {/* A run in progress, shown as a live conversation with Claude Code */}
-      {runningJob && (
-        <section className="mt-5">
-          <h2 className="text-sm font-semibold text-muted mb-2">Being built right now</h2>
-          <SimpleTask
-            key={runningJob}
-            projectId={id}
-            firstJobId={runningJob}
-            gitRepo={gitRepo}
-            components={assessment?.components || []}
-            onTouchedParts={setChangingParts}
-            onFinished={() => {
-              load();
-            }}
-          />
-          <div className="flex items-center gap-3 mt-2">
-            <button onClick={() => setRunningJob(null)} className="text-xs text-muted hover:text-text">
-              Done
-            </button>
-            {previewEntry && (
-              <Link href={`/simple/preview/${id}`} className="text-xs text-good hover:underline">
-                ▶ See it working
-              </Link>
-            )}
-          </div>
-        </section>
-      )}
-
-      </div>
-      <div className="min-w-0">
-      {/* How it fits together: the parts map */}
-      <section className="mt-6 xl:mt-5">
-        <h2 className="text-sm font-semibold text-muted mb-2">How it fits together</h2>
-        {assessment?.components?.length ? (
-          <div className="rounded-2xl border border-border bg-panel p-5">
-            <PartsMap assessment={assessment} changing={changingParts} />
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-border bg-panel p-5 text-sm text-muted">
-            Protégé hasn&apos;t drawn a map of this project yet. It reads the code and shows the main parts and how they connect.
-            {!demo && (
-              <div className="mt-3">
-                <button
-                  onClick={mapProject}
-                  disabled={busy || !!runningJob}
-                  className="px-4 py-2 rounded-xl bg-accent/20 border border-accent/40 text-accent hover:bg-accent/30 text-sm font-semibold disabled:opacity-50"
-                >
-                  Draw a map of this project
-                </button>
-                <span className="text-[11px] ml-3">Takes a few minutes. It only reads, nothing changes.</span>
-              </div>
-            )}
-          </div>
-        )}
-      </section>
-
-      {/* Actions */}
+      {/* What you can do here: always at the top of the page */}
       {!runningJob && (
-        <section className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-3">
+        <section className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-3">
           <Link
             href={`/simple/ask?project=${id}`}
             className="rounded-2xl border border-border bg-panel hover:border-accent/50 p-5"
@@ -297,6 +199,104 @@ export default function SimpleProject({ params }: { params: Promise<{ id: string
           </div>
         </section>
       )}
+
+      {/* A run in progress, shown as a live conversation with Claude Code */}
+      {runningJob && (
+        <section className="mt-5">
+          <h2 className="text-sm font-semibold text-muted mb-2">Being built right now</h2>
+          <SimpleTask
+            key={runningJob}
+            projectId={id}
+            firstJobId={runningJob}
+            gitRepo={gitRepo}
+            components={assessment?.components || []}
+            onTouchedParts={setChangingParts}
+            onFinished={() => {
+              load();
+            }}
+          />
+          <div className="flex items-center gap-3 mt-2">
+            <button onClick={() => setRunningJob(null)} className="text-xs text-muted hover:text-text">
+              Done
+            </button>
+            {previewEntry && (
+              <Link href={`/simple/preview/${id}`} className="text-xs text-good hover:underline">
+                ▶ See it working
+              </Link>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* Two columns on wide screens: what it is on the left; the parts diagram and history on
+          the right. One column, in the same order, otherwise. */}
+      <div className="xl:grid xl:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] xl:gap-8 xl:items-start">
+      <div className="min-w-0">
+      {/* Where it's up to — in plain English */}
+      <section className="mt-5">
+        <h2 className="text-sm font-semibold text-muted mb-2">In plain English</h2>
+        {plainSummary ? (
+          <div className="rounded-2xl border border-border bg-panel p-5">
+            <div className="prose-bw simple-summary">
+              <MarkdownView content={plainSummary} />
+            </div>
+            <ProgressBlock tasks={tasks} phase={assessment?.phase} onDoNext={doNext} />
+            {!demo && (
+              <button
+                onClick={createSummary}
+                disabled={busy || !!runningJob}
+                className="mt-4 text-xs text-muted hover:text-text disabled:opacity-50"
+              >
+                ↻ Refresh this summary
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-border bg-panel p-6 text-center">
+            <div className="text-3xl mb-2">📄</div>
+            <p className="text-sm text-muted mb-3 max-w-md mx-auto">
+              There isn&apos;t a plain-English summary of this project yet. Protégé can read it and write one
+              for you — no jargon.
+            </p>
+            <button
+              onClick={createSummary}
+              disabled={busy || !!runningJob}
+              className="px-4 py-2 rounded-xl bg-accent/20 border border-accent/40 text-accent hover:bg-accent/30 text-sm font-semibold disabled:opacity-50"
+            >
+              {busy ? "Starting…" : "Write a plain-English summary"}
+            </button>
+            <p className="text-[11px] text-muted mt-2">Takes a minute or two.</p>
+          </div>
+        )}
+      </section>
+
+      </div>
+      <div className="min-w-0">
+      {/* How it fits together: the parts map */}
+      <section className="mt-6 xl:mt-5">
+        <h2 className="text-sm font-semibold text-muted mb-2">How it fits together</h2>
+        {assessment?.components?.length ? (
+          <div className="rounded-2xl border border-border bg-panel p-5">
+            <PartsMap assessment={assessment} changing={changingParts} />
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-border bg-panel p-5 text-sm text-muted">
+            Protégé hasn&apos;t drawn a map of this project yet. It reads the code and shows the main parts and how they connect.
+            {!demo && (
+              <div className="mt-3">
+                <button
+                  onClick={mapProject}
+                  disabled={busy || !!runningJob}
+                  className="px-4 py-2 rounded-xl bg-accent/20 border border-accent/40 text-accent hover:bg-accent/30 text-sm font-semibold disabled:opacity-50"
+                >
+                  Draw a map of this project
+                </button>
+                <span className="text-[11px] ml-3">Takes a few minutes. It only reads, nothing changes.</span>
+              </div>
+            )}
+          </div>
+        )}
+      </section>
 
       {/* Recent activity — a plain history you can undo */}
       {jobs.length > 0 && !runningJob && (

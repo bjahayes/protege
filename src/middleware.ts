@@ -7,7 +7,8 @@
 //   2. A non-GET request that says where it came from (Origin) must come from Protégé itself.
 //   3. A non-GET request must send JSON (a plain web form can't).
 //   4. A browser request must come from a Protégé page itself (Sec-Fetch-Site: same-origin).
-//   5. Every API call must carry this install's access key: the browser gets it as a cookie
+//   5. Pages only take GET from other sites (anything else must come from a Protégé page).
+//   6. Every API call must carry this install's access key: the browser gets it as a cookie
 //      when it opens a Protégé page (other sites can't send or read it); scripts can send it
 //      in an X-Protege-Token header. The key is made by scripts/serve.mjs.
 
@@ -36,6 +37,15 @@ export function middleware(req: NextRequest) {
   }
 
   if (!req.nextUrl.pathname.startsWith("/api/")) {
+    // Pages only ever need GET. Protégé has no server actions, so anything else sent to a page
+    // must come from a Protégé page itself; that keeps attacks on Next.js's page handling
+    // (crafted server-component requests) out, whatever version is running.
+    if (req.method !== "GET" && req.method !== "HEAD") {
+      const site = req.headers.get("sec-fetch-site");
+      const origin = req.headers.get("origin");
+      const own = site ? site === "same-origin" : origin === `${req.nextUrl.protocol}//${host}`;
+      if (!own) return new NextResponse("Request from another site refused.", { status: 403 });
+    }
     // A page: hand the browser this install's key, and don't let other sites frame Protégé.
     const res = NextResponse.next();
     if (TOKEN && !sameKey(req.cookies.get(COOKIE)?.value, TOKEN)) {
