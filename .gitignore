@@ -1,0 +1,16 @@
+/node_modules
+/.next
+/out
+/build
+next-env.d.ts
+*.tsbuildinfo
+.env*
+
+# Your own data: projects, run history, chats' attachments. Never published.
+/data
+
+# Local working folders: old code copies, Protégé's notes about this folder, editor settings.
+/.backup
+/.buildwork
+/.protege
+/.claude
