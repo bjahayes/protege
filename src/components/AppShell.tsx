@@ -9,6 +9,7 @@ import CommandBar from "./CommandBar";
 import GuideHelper from "./GuideHelper";
 import SignInBanner from "./SignInBanner";
 import RestartButton from "./RestartButton";
+import { DemoNotice } from "./DemoBar";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -61,6 +62,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
       <main className="flex-1 min-w-0 flex flex-col">
         <SignInBanner />
+        {!simple && <DemoNotice />}
         {/* Pages scroll here, so the sign-in banner never pushes a full-height page off screen. */}
         <div id="main-scroll" className="flex-1 min-h-0 overflow-y-auto" style={{ scrollbarGutter: "stable" }}>
           {children}
