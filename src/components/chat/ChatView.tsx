@@ -210,7 +210,7 @@ function PermissionCard({
         <button
           disabled={busy}
           onClick={() => decide("allow")}
-          className="px-3 py-1.5 rounded-lg bg-accent/20 border border-accent/50 text-accent hover:bg-accent/30 text-[13px] font-medium disabled:opacity-40"
+          className="btn-main px-3 py-1.5 rounded-lg bg-accent/20 border border-accent/50 text-accent hover:bg-accent/30 text-[13px] font-medium disabled:opacity-40"
         >
           {plan ? "Approve plan" : "Allow once"}
         </button>
@@ -709,7 +709,7 @@ function Composer({
               <button
                 onClick={send}
                 disabled={sending || (!draft.trim() && !files.length)}
-                className="text-[12px] px-3 py-1.5 rounded-lg bg-accent/20 border border-accent/50 text-accent hover:bg-accent/30 font-medium disabled:opacity-40"
+                className="btn-main text-[12px] px-3 py-1.5 rounded-lg bg-accent/20 border border-accent/50 text-accent hover:bg-accent/30 font-medium disabled:opacity-40"
               >
                 {sending ? "Sending…" : "Send ↵"}
               </button>

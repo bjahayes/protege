@@ -10,6 +10,7 @@
 
 import fs from "fs";
 import path from "path";
+import { gitExe } from "./git-bin";
 import { execFileSync } from "child_process";
 import { metaPath } from "./meta";
 
@@ -90,7 +91,7 @@ export function endWork(dir: string, rel: string) {
 }
 
 const git = (dir: string, args: string[]) =>
-  execFileSync("git", args, { cwd: dir, encoding: "utf8", maxBuffer: 32 * 1024 * 1024, windowsHide: true, stdio: ["ignore", "pipe", "ignore"] });
+  execFileSync(gitExe(), args, { cwd: dir, encoding: "utf8", maxBuffer: 32 * 1024 * 1024, windowsHide: true, stdio: ["ignore", "pipe", "ignore"] });
 
 /** The document's saved versions in git, oldest first (up to the last 50 changes). */
 function gitVersions(dir: string, rel: string): { at: number; by: string; text: string }[] {
@@ -149,6 +150,14 @@ export function ensureVersioned(dir: string, rel: string): void {
 export function restoreVersion(dir: string, rel: string, n: number): DocVersion | null {
   const text = readVersion(dir, rel, n);
   if (text === null) return null;
+  // The document as it is now may hold edits never saved as a version (made since the last time
+  // Protégé read it): save them first, so putting an old version back never loses them.
+  const now = current(dir, rel);
+  const versions = listVersions(dir, rel);
+  const last = versions[versions.length - 1];
+  if (now !== null && !(last && same(readVersion(dir, rel, last.n), now))) {
+    recordVersion(dir, rel, { by: `Saved before restoring version ${n}` });
+  }
   fs.mkdirSync(path.dirname(path.join(dir, rel)), { recursive: true });
   fs.writeFileSync(path.join(dir, rel), text, "utf8");
   return recordVersion(dir, rel, { by: `Restored version ${n}` });

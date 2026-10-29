@@ -15,12 +15,13 @@ export default function SimplePreview({ params }: { params: Promise<{ id: string
   // Previews come from their own origin (a separate small server), never Protégé's own.
   const [origin, setOrigin] = useState<string | null>(null);
 
+  // The project's own keyed preview address (lib/preview-key.ts).
   useEffect(() => {
-    apiFetch("/api/preview-origin", { cache: "no-store" })
+    apiFetch(`/api/preview-origin?project=${encodeURIComponent(id)}`, { cache: "no-store" })
       .then((r) => r.json())
-      .then((j) => setOrigin(j.origin || null))
+      .then((j) => setOrigin(j.url || null))
       .catch(() => setOrigin(null));
-  }, []);
+  }, [id]);
 
   useEffect(() => {
     apiFetch(`/api/projects/${id}`, { cache: "no-store" })
@@ -37,7 +38,7 @@ export default function SimplePreview({ params }: { params: Promise<{ id: string
       .catch(() => setHasPreview(false));
   }, [id]);
 
-  const base = origin ? `${origin}/${encodeURIComponent(id)}/` : "";
+  const base = origin || "";
   const src = `${base}?v=${nonce}`;
 
   return (

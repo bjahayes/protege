@@ -259,7 +259,7 @@ export default function SimpleProject({ params }: { params: Promise<{ id: string
             <button
               onClick={() => startTask()}
               disabled={busy || !taskText.trim()}
-              className="px-4 py-2 rounded-xl bg-accent/20 border border-accent/40 text-accent hover:bg-accent/30 text-sm font-semibold disabled:opacity-40"
+              className="btn-main px-4 py-2 rounded-xl bg-accent/20 border border-accent/40 text-accent hover:bg-accent/30 text-sm font-semibold disabled:opacity-40"
             >
               {busy ? "Starting…" : planFirst ? "Plan it" : "Start"}
             </button>

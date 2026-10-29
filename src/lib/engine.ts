@@ -241,7 +241,9 @@ function writeTemp(text: string): string {
 function buildArgs(o: any, tempFiles: string[]): string[] {
   const args = ["-p", "--output-format", "stream-json", "--verbose"];
   if (o.model) args.push("--model", String(o.model));
-  if (o.permissionMode && o.permissionMode !== "default") args.push("--permission-mode", String(o.permissionMode));
+  // Always say the mode, "default" included: left out, the person's own settings decide it (an
+  // acceptEdits default would let a document agent edit any file).
+  if (o.permissionMode) args.push("--permission-mode", String(o.permissionMode));
   if (o.effort) args.push("--effort", String(o.effort));
   if (o.maxTurns != null) args.push("--max-turns", String(o.maxTurns));
   if (o.maxBudgetUsd != null) args.push("--max-budget-usd", String(o.maxBudgetUsd));
@@ -430,17 +432,24 @@ export function initProblem(m: any): string | null {
 export { NOT_SIGNED_IN };
 
 // ---------------------------------------------------------------------------
-// Signing in: Claude Code's own sign-in, in a window of its own.
-// Protégé opens `claude auth login` in a separate terminal window. Claude Code opens the Claude
-// sign-in page in the browser; the person signs in there and, if the page shows a code, pastes
-// it into that window. The code goes straight to Claude Code: Protégé never sees or handles
-// it. Protégé only watches `claude auth status` to see when the sign-in has finished.
+// Signing in: Claude Code's own sign-in.
+// Protégé runs `claude auth login` out of sight and shows the sign-in link it prints. If the
+// sign-in page shows a code, the person pastes it into Protégé, which writes it to that process
+// and keeps no copy. Claude Code saves the login itself. If no link appears, `claude auth login`
+// opens in a window of its own instead, and the code goes straight to Claude Code. Either way
+// Protégé only watches `claude auth status` to see when the sign-in has finished.
 // ---------------------------------------------------------------------------
 
 export interface LoginState {
   status: "idle" | "waiting" | "done" | "failed";
   message?: string;
   startedAt?: number;
+  /** The Claude sign-in page's address, once the sign-in running out of sight has shown it. */
+  url?: string;
+  /** The sign-in is asking for the code the page shows. */
+  askingForCode?: boolean;
+  /** The sign-in is running in a window of its own (the fallback). */
+  inWindow?: boolean;
 }
 
 const gl = globalThis as unknown as { __protegeLoginState?: LoginState };
@@ -492,13 +501,84 @@ export async function loginState(): Promise<LoginState> {
   return cur;
 }
 
-export function startLogin(): LoginState {
+const glp = globalThis as unknown as { __protegeLoginProc?: ChildProcess | null };
+
+/**
+ * Sign Claude Code in. Its sign-in opens the Claude page in the browser and, once the person signs
+ * in there, finishes by itself; only when that fails does it ask for a code from the page. So it is
+ * run out of sight, with the page's link and (if asked) a box for the code shown in Protégé. If it
+ * can't run that way (it stops, or shows no link within 20 seconds), it falls back to a window of
+ * its own, as it used to. `window: true` asks for the window straight away.
+ */
+export function startLogin(opts: { window?: boolean } = {}): LoginState {
   const exe = findClaude();
   if (!exe) return (gl.__protegeLoginState = { status: "failed", message: NOT_INSTALLED });
+  const args = ["auth", "login", "--claudeai"];
   try {
-    openInWindow(exe, ["auth", "login", "--claudeai"], "Sign in to Claude");
-  } catch (e: any) {
-    return (gl.__protegeLoginState = { status: "failed", message: String(e?.message || e) });
+    glp.__protegeLoginProc?.kill();
+  } catch {
+    /* already gone */
   }
-  return (gl.__protegeLoginState = { status: "waiting", startedAt: Date.now() });
+  glp.__protegeLoginProc = null;
+  const inWindow = (): LoginState => {
+    try {
+      openInWindow(exe, args, "Sign in to Claude");
+    } catch (e: any) {
+      return (gl.__protegeLoginState = { status: "failed", message: String(e?.message || e) });
+    }
+    return (gl.__protegeLoginState = { status: "waiting", startedAt: Date.now(), inWindow: true });
+  };
+  if (opts.window) return inWindow();
+
+  let child: ChildProcess;
+  try {
+    child = spawn(exe, args, { env: engineEnv() as NodeJS.ProcessEnv, stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
+  } catch {
+    return inWindow();
+  }
+  glp.__protegeLoginProc = child;
+  const state: LoginState = { status: "waiting", startedAt: Date.now() };
+  gl.__protegeLoginState = state;
+  let out = "";
+  const read = (d: Buffer) => {
+    // Its output, without colour codes.
+    out += d.toString("utf8").replace(/\x1b\[[0-9;?]*[A-Za-z]/g, "");
+    const url = out.match(/https:\/\/\S+/)?.[0];
+    if (url && gl.__protegeLoginState === state) state.url = url.replace(/[)\].,]+$/, "");
+    if (/(paste|enter)[^\n]*code/i.test(out)) state.askingForCode = true;
+  };
+  child.stdout?.on("data", read);
+  child.stderr?.on("data", read);
+  child.on("error", () => {
+    if (gl.__protegeLoginState === state) inWindow();
+  });
+  child.on("exit", async (code) => {
+    if (glp.__protegeLoginProc === child) glp.__protegeLoginProc = null;
+    if (gl.__protegeLoginState !== state) return;
+    if ((await authStatus(true)).loggedIn) gl.__protegeLoginState = { status: "done" };
+    // It couldn't sign in out of sight: the window, as before.
+    else if (code !== 0 && Date.now() - (state.startedAt || 0) < 60_000) inWindow();
+    else gl.__protegeLoginState = { status: "failed", message: out.trim().split("\n").slice(-2).join(" ").slice(0, 300) || "The sign-in didn't finish." };
+  });
+  setTimeout(() => {
+    if (gl.__protegeLoginState === state && !state.url && glp.__protegeLoginProc === child) {
+      try {
+        child.kill();
+      } catch {
+        /* gone */
+      }
+      inWindow();
+    }
+  }, 20_000);
+  return state;
+}
+
+/** Pass the code from the sign-in page to the sign-in running out of sight. */
+export function submitLoginCode(code: string): LoginState {
+  const p = glp.__protegeLoginProc;
+  const cur = gl.__protegeLoginState || { status: "idle" };
+  if (!p?.stdin || p.exitCode != null) return cur;
+  p.stdin.write(code.trim() + "\n");
+  if (cur.status === "waiting") cur.askingForCode = false;
+  return cur;
 }

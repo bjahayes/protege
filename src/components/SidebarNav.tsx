@@ -137,7 +137,7 @@ function NavLink({ it, active }: { it: Item; active: boolean }) {
 
 function Badge({ n, warn }: { n: number; warn?: boolean }) {
   return (
-    <span className={`inline-flex items-center gap-1 text-[11px] font-medium ${warn ? "text-warn" : "live-dot text-running"}`}>
+    <span className={`inline-flex items-center gap-1 text-[11px] font-medium ${warn ? "text-warn nav-badge-warn" : "live-dot text-running"}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${warn ? "bg-warn" : "bg-running"}`} />
       {n}
     </span>

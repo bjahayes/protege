@@ -143,7 +143,7 @@ export default function SimpleNew() {
             <button
               onClick={create}
               disabled={busy || !name.trim() || (needsDescription && !description.trim())}
-              className="px-5 py-2.5 rounded-xl bg-accent/20 border border-accent/40 text-accent hover:bg-accent/30 text-sm font-semibold disabled:opacity-40"
+              className="btn-main px-5 py-2.5 rounded-xl bg-accent/20 border border-accent/40 text-accent hover:bg-accent/30 text-sm font-semibold disabled:opacity-40"
             >
               {busy ? "Creating…" : description.trim() ? "Create it and shape it →" : "Create it →"}
             </button>

@@ -3,27 +3,36 @@
 import { useEffect, useRef, useState } from "react";
 
 let mermaidPromise: Promise<any> | null = null;
+let themedFor = "";
+
+/** The theme's colours, read from the page, so the flowchart matches whichever look is chosen. */
+function themeVars() {
+  const css = getComputedStyle(document.documentElement);
+  const v = (name: string) => css.getPropertyValue(name).trim();
+  const midnight = document.documentElement.dataset.theme === "midnight";
+  return {
+    key: midnight ? "midnight" : "classic",
+    vars: {
+      background: v("--panel"),
+      primaryColor: v("--panel-2"),
+      primaryBorderColor: midnight ? v("--edge") : v("--accent"),
+      primaryTextColor: v("--text"),
+      lineColor: v("--muted"),
+      fontFamily: midnight ? "Geist, Inter, system-ui, sans-serif" : "ui-sans-serif, system-ui, sans-serif",
+      fontSize: "13px",
+    },
+  };
+}
+
 async function getMermaid() {
-  if (!mermaidPromise) {
-    mermaidPromise = import("mermaid").then((m) => {
-      const mermaid = m.default;
-      mermaid.initialize({
-        startOnLoad: false,
-        theme: "dark",
-        securityLevel: "strict",
-        themeVariables: {
-          background: "#141820",
-          primaryColor: "#1b212b",
-          primaryBorderColor: "#5b9dff",
-          primaryTextColor: "#e6e9ee",
-          lineColor: "#8b95a5",
-          fontSize: "13px",
-        },
-      });
-      return mermaid;
-    });
+  if (!mermaidPromise) mermaidPromise = import("mermaid").then((m) => m.default);
+  const mermaid = await mermaidPromise;
+  const t = themeVars();
+  if (themedFor !== t.key) {
+    mermaid.initialize({ startOnLoad: false, theme: "dark", securityLevel: "strict", themeVariables: t.vars });
+    themedFor = t.key;
   }
-  return mermaidPromise;
+  return mermaid;
 }
 
 let counter = 0;
@@ -32,6 +41,13 @@ export default function Mermaid({ chart }: { chart: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const [err, setErr] = useState<string | null>(null);
   const [svg, setSvg] = useState<string>("");
+  // Redraw when the look is switched.
+  const [look, setLook] = useState(0);
+  useEffect(() => {
+    const on = () => setLook((n) => n + 1);
+    window.addEventListener("protege-theme", on);
+    return () => window.removeEventListener("protege-theme", on);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -53,7 +69,7 @@ export default function Mermaid({ chart }: { chart: string }) {
     return () => {
       cancelled = true;
     };
-  }, [chart]);
+  }, [chart, look]);
 
   if (err) {
     return (

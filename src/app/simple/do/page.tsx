@@ -207,7 +207,7 @@ export default function SimpleDo() {
             <button
               onClick={start}
               disabled={busy || !task.trim()}
-              className="px-5 py-2.5 rounded-xl bg-accent/20 border border-accent/40 text-accent hover:bg-accent/30 text-sm font-semibold disabled:opacity-40"
+              className="btn-main px-5 py-2.5 rounded-xl bg-accent/20 border border-accent/40 text-accent hover:bg-accent/30 text-sm font-semibold disabled:opacity-40"
             >
               {busy ? "Starting…" : "Start"}
             </button>

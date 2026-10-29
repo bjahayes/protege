@@ -21,9 +21,10 @@
     "start": "node scripts/serve.mjs next start -H 127.0.0.1 -p 4317",
     "lint": "next lint",
     "test:diagram": "node --experimental-strip-types --no-warnings scripts/test-wire-route.ts",
-    "test:keep": "node --experimental-strip-types --no-warnings scripts/test-keep.ts",
+    "test:keep": "node --experimental-strip-types --no-warnings --import ./scripts/ts-resolve.mjs scripts/test-keep.ts",
     "test:panel": "node --experimental-strip-types --no-warnings --import ./scripts/ts-resolve.mjs scripts/test-context-panel.ts",
-    "test": "npm run test:diagram && npm run test:keep && npm run test:panel",
+    "test:safety": "node --experimental-strip-types --no-warnings --import ./scripts/ts-resolve.mjs scripts/test-safety.ts",
+    "test": "npm run test:diagram && npm run test:keep && npm run test:panel && npm run test:safety",
     "restart": "node scripts/restart.mjs"
   },
   "dependencies": {

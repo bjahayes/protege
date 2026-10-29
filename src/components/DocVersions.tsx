@@ -70,7 +70,7 @@ export default function DocVersions({
         <span className="font-mono text-[12px]">{file}</span>
         {latest ? (
           <span className="text-muted">
-            Version {latest.n} of {versions.length}: {latest.agentId ? `made by ${latest.by}` : latest.by},{" "}
+            <span className="text-accent font-medium">Version {latest.n}</span> of {versions.length}: {latest.agentId ? `made by ${latest.by}` : latest.by},{" "}
             {new Date(latest.at).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}
           </span>
         ) : null}
@@ -83,7 +83,7 @@ export default function DocVersions({
           <button
             onClick={runAgent}
             disabled={busy}
-            className="ml-auto px-3 py-1.5 rounded-lg bg-accent/15 border border-accent/40 text-accent hover:bg-accent/25 font-medium disabled:opacity-50"
+            className="btn-main ml-auto px-3 py-1.5 rounded-lg bg-accent/15 border border-accent/40 text-accent hover:bg-accent/25 font-medium disabled:opacity-50"
           >
             {busy ? "Starting…" : `▶ ${agent.name}`}
           </button>
@@ -95,7 +95,7 @@ export default function DocVersions({
         <div className="rounded-xl border border-border bg-panel divide-y divide-border mb-4">
           {[...versions].reverse().map((v) => (
             <div key={v.n} className={`flex items-center gap-3 px-4 py-2 text-[12.5px] ${viewing?.n === v.n ? "bg-panel-2" : ""}`}>
-              <span className="font-medium w-20 shrink-0">Version {v.n}</span>
+              <span className="font-medium w-20 shrink-0 text-accent">Version {v.n}</span>
               <span className="flex-1 min-w-0 truncate text-muted" title={v.by}>
                 {v.by}
                 {v.agentVersion ? ` (agent version ${v.agentVersion})` : ""}

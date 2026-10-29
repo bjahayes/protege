@@ -135,13 +135,13 @@ export default function ProjectDetail({ params }: { params: Promise<{ id: string
           <div className="flex flex-wrap items-center gap-2 ml-auto">
             <Link
               href={`/assistant?project=${id}`}
-              className="px-3 py-1.5 rounded-lg border border-border text-muted text-sm hover:text-text hover:border-accent/40"
+              className="btn-alt px-3 py-1.5 rounded-lg border border-border text-muted text-sm hover:text-text hover:border-accent/40"
             >
               ✧ Ask a question
             </Link>
             <button
               onClick={() => setTab("run")}
-              className="px-3 py-1.5 rounded-lg bg-accent/15 border border-accent/30 text-accent text-sm hover:bg-accent/25"
+              className="btn-main px-3 py-1.5 rounded-lg bg-accent/15 border border-accent/30 text-accent text-sm hover:bg-accent/25"
             >
               ▶ Run an agent
             </button>
@@ -556,11 +556,11 @@ function Stat({ label, value, color }: { label: string; value: number; color: st
 }
 
 const COMP_STATUS: { key: string; label: string; color: string }[] = [
-  { key: "solid", label: "working", color: "#3fb950" },
-  { key: "partial", label: "partly built", color: "#d29922" },
-  { key: "stub", label: "only started", color: "#8b95a5" },
-  { key: "broken", label: "not working", color: "#f85149" },
-  { key: "unknown", label: "not sure yet", color: "#8b95a5" },
+  { key: "solid", label: "working", color: "var(--good)" },
+  { key: "partial", label: "partly built", color: "var(--warn)" },
+  { key: "stub", label: "only started", color: "var(--muted)" },
+  { key: "broken", label: "not working", color: "var(--bad)" },
+  { key: "unknown", label: "not sure yet", color: "var(--muted)" },
 ];
 
 function AssessmentSummary({ a, onGoMap }: { a: Assessment; onGoMap: () => void }) {
@@ -681,7 +681,7 @@ function DocumentsList({ projectId, documents, onChanged }: { projectId: string;
                   {d.lastBy && <span className="block text-[11.5px] text-muted truncate">Latest: {d.lastBy}</span>}
                 </span>
                 <span className="text-[11.5px] text-muted shrink-0">
-                  {d.versions} {d.versions === 1 ? "version" : "versions"}
+                  <span className="text-accent">{d.versions} {d.versions === 1 ? "version" : "versions"}</span>
                   {d.lastAt ? ` · ${timeAgo(d.lastAt)}` : ""}
                 </span>
               </button>
@@ -836,11 +836,11 @@ interface TxMsg {
 const CATEGORY_META: Record<TxCategory, { label: string; color: string }> = {
   decision: { label: "Needs you", color: "#f5c542" },
   instruction: { label: "Your input", color: "#e6934a" },
-  analysis: { label: "AI analysis", color: "#a371f7" },
+  analysis: { label: "AI analysis", color: "var(--running)" },
   thinking: { label: "Thinking", color: "#6b7280" },
-  action: { label: "Action", color: "#5b9dff" },
-  result: { label: "Result", color: "#3fb950" },
-  error: { label: "Error", color: "#f85149" },
+  action: { label: "Action", color: "var(--accent)" },
+  result: { label: "Result", color: "var(--good)" },
+  error: { label: "Error", color: "var(--bad)" },
 };
 const CATEGORY_ORDER: TxCategory[] = [
   "decision",
@@ -957,7 +957,7 @@ function SessionTranscript({
               className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[11px] transition-opacity ${
                 off ? "opacity-35" : ""
               }`}
-              style={{ borderColor: meta.color + "55", color: meta.color }}
+              style={{ borderColor: `color-mix(in srgb, ${meta.color} 33%, transparent)`, color: meta.color }}
               title={off ? "Show" : "Hide"}
             >
               <span className="w-2 h-2 rounded-full" style={{ background: meta.color }} />
@@ -1014,7 +1014,7 @@ function TranscriptMessage({ m }: { m: TxMsg }) {
       <div className="flex items-center gap-2 mb-1.5">
         <span
           className="text-[11px] font-medium px-1.5 py-0.5 rounded"
-          style={{ background: cat.color + "22", color: cat.color }}
+          style={{ background: `color-mix(in srgb, ${cat.color} 13%, transparent)`, color: cat.color }}
         >
           {cat.label}
         </span>

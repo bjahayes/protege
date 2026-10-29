@@ -81,9 +81,9 @@ export default function AssistantPage() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="border-b border-border px-6 py-3 flex items-center justify-between gap-3">
+      <div className="border-b border-border px-6 py-3 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-lg font-bold flex items-center gap-2">✧ Assistant</h1>
-        <div className="flex items-center gap-2 text-xs text-muted">
+        <div className="flex items-center gap-2 text-xs text-muted min-w-0">
           <span>Ask about</span>
           <select
             value={scopeKey}

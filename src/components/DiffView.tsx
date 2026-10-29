@@ -226,7 +226,7 @@ function FilePatch({ f }: { f: DiffFile }) {
         <span className="text-[11px] text-bad">−{f.deletions}</span>
       </button>
       {open && f.patch && (
-        <pre className="text-[11px] font-mono overflow-x-auto bg-[#0d1117] leading-relaxed">
+        <pre className="text-[11px] font-mono overflow-x-auto bg-bg leading-relaxed">
           {f.patch.split("\n").map((line, i) => (
             <DiffLine key={i} line={line} />
           ))}

@@ -12,6 +12,7 @@ import { buildPlainSummaryPrompt } from "./plain-summary";
 import { endWork, recordVersion, startWork } from "./doc-versions";
 import { isGitRepo } from "./git";
 import { execFileSync } from "child_process";
+import { gitExe } from "./git-bin";
 import type { Job } from "./types";
 
 // What a document or report agent may use: reading and searching, and its one file. No shell or
@@ -22,7 +23,7 @@ const NEVER = ["Bash", "NotebookEdit", "PowerShell"];
 /** The project's recent saved history, for agents that write about what changed. */
 function gitHistory(dir: string): string {
   try {
-    return execFileSync("git", ["log", "-n", "80", "--date=short", "--pretty=format:%h %ad %s", "--stat"], {
+    return execFileSync(gitExe(), ["log", "-n", "80", "--date=short", "--pretty=format:%h %ad %s", "--stat"], {
       cwd: dir,
       encoding: "utf8",
       maxBuffer: 4 * 1024 * 1024,
@@ -80,7 +81,10 @@ export async function runAgent(a: AgentDef, o: RunAgentOptions): Promise<Job> {
     return jm.launch({
       ...base,
       kind: "run",
-      permissionMode: "default",
+      // "dontAsk": anything not allowed below is refused outright. With "default", an edit outside the
+      // list waits for an approval no one can give in a headless run, or, if the person's settings
+      // accept edits, goes through; the agent must change only its one file whatever the settings.
+      permissionMode: "dontAsk",
       allowedTools: [...READ_TOOLS, `Edit(${doc})`, `Write(${doc})`],
       disallowedTools: NEVER,
       primeContext: false,

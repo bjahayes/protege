@@ -12,6 +12,7 @@ import SignInBanner from "./SignInBanner";
 import RestartButton from "./RestartButton";
 import { DemoNotice } from "./DemoBar";
 import ExplainStyleToggle from "./ExplainStyleToggle";
+import ThemeToggle from "./ThemeToggle";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -54,6 +55,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           {!simple && (
             <div className="p-3 flex flex-col gap-2">
               <ExplainStyleToggle />
+              <ThemeToggle />
               <NotificationCenter />
               <RestartButton />
             </div>

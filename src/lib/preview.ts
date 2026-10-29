@@ -1,4 +1,5 @@
 import fs from "fs";
+import os from "os";
 import path from "path";
 
 // Places a static site's entry point commonly lives.
@@ -70,8 +71,10 @@ export function injectBase(html: string, baseHref: string): string {
  */
 export function resolvePreviewFile(projectPath: string, relParts: string[]): string | null {
   const rel = relParts.join("/");
-  // Never serve version-control or dependency internals.
-  if (/(^|\/)\.git(\/|$)/.test(rel) || /(^|\/)node_modules(\/|$)/.test(rel)) return null;
+  // Never serve hidden files or folders (.env, .git, .protege, .claude, .ssh…), dependency folders,
+  // or files that hold keys and certificates: a preview is a web page, not a way into the folder.
+  if (relParts.some((p) => p.startsWith(".")) || /(^|\/)node_modules(\/|$)/.test(rel)) return null;
+  if (/\.(pem|key|p12|pfx|crt|cer|kdbx|sqlite|db)$/i.test(rel) || /(^|\/)(id_rsa|id_ed25519|credentials)(\.|$|\/)/i.test(rel)) return null;
 
   const target = relParts.length ? path.resolve(projectPath, ...relParts) : null;
   if (!target) {
@@ -91,4 +94,12 @@ export function resolvePreviewFile(projectPath: string, relParts: string[]): str
   } catch {
     return null;
   }
+}
+
+/** Your home folder, a drive's root, or a folder that holds your home folder: never served. */
+export function tooBroad(dir: string): boolean {
+  const norm = (p: string) => path.resolve(p).replace(/[\\/]+$/, "").toLowerCase();
+  const d = norm(dir);
+  const home = norm(os.homedir());
+  return d === home || norm(path.parse(dir).root) === d || home.startsWith(d + path.sep.toLowerCase()) || home.startsWith(d + "/");
 }

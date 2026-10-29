@@ -73,6 +73,53 @@ check(committed, "the change is committed while it's being read");
 check(d1.available && d1.files.some((f) => f.path === "notes.txt") && d2.available && d2.files.some((f) => f.path === "notes.txt"), "reads at the same moment both see the change");
 await removeWorktree(repo, wt2.worktreePath, wt2.branch);
 
+// Two safe copies of one project, kept one after the other: neither undoes the other's checklist
+// ticks, and a note the second didn't change isn't put back to how it was when it was made.
+fs.rmSync(path.join(repo, "draft.txt"), { force: true }); // left unsaved by an earlier check
+const tasksFile = path.join(repo, ".protege", "tasks.json");
+const twoTasks = { tasks: [{ id: "a", title: "First", status: "todo" }, { id: "b", title: "Second", status: "todo" }] };
+fs.writeFileSync(tasksFile, JSON.stringify(twoTasks));
+fs.writeFileSync(path.join(repo, ".protege", "plain-summary.md"), "old summary\n");
+const wtA = await createWorktree(repo, "keepaaaa-0000-0000");
+const wtB = await createWorktree(repo, "keepbbbb-0000-0000");
+const tick = (wt: { worktreePath: string }, id: string) => {
+  const f = path.join(wt.worktreePath, ".protege", "tasks.json");
+  const j = JSON.parse(fs.readFileSync(f, "utf8"));
+  j.tasks.find((t: any) => t.id === id).status = "done";
+  fs.writeFileSync(f, JSON.stringify(j));
+};
+tick(wtA, "a");
+fs.appendFileSync(path.join(wtA.worktreePath, "notes.txt"), "first change\n");
+fs.writeFileSync(path.join(wtA.worktreePath, ".protege", "plain-summary.md"), "new summary\n");
+await commitWorktree(wtA.worktreePath, "first");
+tick(wtB, "b");
+fs.writeFileSync(path.join(wtB.worktreePath, "second.txt"), "second change\n");
+await commitWorktree(wtB.worktreePath, "second");
+const keepA = await applyWorktree(repo, wtA.branch, { worktreePath: wtA.worktreePath });
+check(keepA.ok, `the first safe copy is kept (${keepA.message})`);
+check((await applyWorktree(repo, wtB.branch, { worktreePath: wtB.worktreePath })).ok, "the second safe copy is kept");
+const after = JSON.parse(fs.readFileSync(tasksFile, "utf8")).tasks.map((t: any) => `${t.id}:${t.status}`).join(",");
+check(after === "a:done,b:done", `both checklist ticks survive (${after})`);
+check(fs.readFileSync(path.join(repo, ".protege", "plain-summary.md"), "utf8") === "new summary\n", "a note the second copy didn't change isn't put back to its old version");
+await removeWorktree(repo, wtA.worktreePath, wtA.branch);
+await removeWorktree(repo, wtB.worktreePath, wtB.branch);
+
+// A safe copy shares the project's node_modules (so checks can run), and removing the safe copy
+// never empties the project's own.
+fs.writeFileSync(path.join(repo, ".gitignore"), "node_modules/\n");
+git("add", ".gitignore");
+git("-c", "user.name=t", "-c", "user.email=t@example.invalid", "commit", "-q", "-m", "ignore deps");
+fs.mkdirSync(path.join(repo, "node_modules", "pkg"), { recursive: true });
+fs.writeFileSync(path.join(repo, "node_modules", "pkg", "index.js"), "module.exports = 1;\n");
+const dep = await createWorktree(repo, "depslink-0000-0000");
+check(fs.existsSync(path.join(dep.worktreePath, "node_modules", "pkg", "index.js")), "the safe copy can see the project's node_modules");
+fs.appendFileSync(path.join(dep.worktreePath, "notes.txt"), "dep change\n");
+await commitWorktree(dep.worktreePath, "dep change");
+const files = execFileSync("git", ["show", "--name-only", "--pretty=format:", "HEAD"], { cwd: dep.worktreePath }).toString().trim();
+check(files === "notes.txt", `the link to node_modules isn't committed (${files.replace(/\n/g, ", ")})`);
+await removeWorktree(repo, dep.worktreePath, dep.branch);
+check(fs.existsSync(path.join(repo, "node_modules", "pkg", "index.js")), "removing the safe copy leaves the project's node_modules alone");
+
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log(failures ? `${failures} failed` : "all passed");
 if (failures) process.exit(1);

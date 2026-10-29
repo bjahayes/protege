@@ -5,12 +5,12 @@ import { useEffect, useState } from "react";
 import type { RepoMap, RepoFile } from "@/lib/repomap";
 
 const KIND_COLOR: Record<string, string> = {
-  function: "#5b9dff",
-  func: "#5b9dff",
-  fn: "#5b9dff",
-  class: "#a371f7",
-  type: "#d29922",
-  const: "#3fb950",
+  function: "var(--accent)",
+  func: "var(--accent)",
+  fn: "var(--accent)",
+  class: "var(--running)",
+  type: "var(--warn)",
+  const: "var(--good)",
 };
 
 export default function RepoMapView({ projectId }: { projectId: string }) {
@@ -82,7 +82,7 @@ function FileRow({ f, maxRank }: { f: RepoFile; maxRank: number }) {
             <span
               key={i}
               className="text-[11px] px-1.5 py-0.5 rounded font-mono border"
-              style={{ borderColor: (KIND_COLOR[s.kind] || "#8b95a5") + "55", color: KIND_COLOR[s.kind] || "#8b95a5" }}
+              style={{ borderColor: `color-mix(in srgb, ${KIND_COLOR[s.kind] || "var(--muted)"} 33%, transparent)`, color: KIND_COLOR[s.kind] || "var(--muted)" }}
               title={`${s.kind} · line ${s.line}`}
             >
               {s.name}

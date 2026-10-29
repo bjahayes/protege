@@ -90,3 +90,23 @@ export function registerProject(p: string, name: string) {
 export function unregisterProject(p: string) {
   getDb().prepare(`DELETE FROM projects WHERE path = ?`).run(p);
 }
+
+const DAY = 24 * 60 * 60 * 1000;
+/** Event types that are bulk rather than the story of a run: dropped once a run is 90 days old. */
+const BULKY_EVENTS = ["tool_result", "thinking", "status", "system"];
+
+/**
+ * Keep job_events from growing without limit. A run's events are kept in full for 90 days; after
+ * that its bulky events go (tool outputs, thinking, status notes), keeping its steps, words and
+ * result, so its history and replay still read; after a year its events go entirely (the run itself
+ * stays listed). Returns how many events were removed.
+ */
+export function pruneEvents(now = Date.now()): number {
+  const db = getDb();
+  const ended = `SELECT id FROM jobs WHERE COALESCE(ended_at, started_at) < ?`;
+  const bulky = db
+    .prepare(`DELETE FROM job_events WHERE type IN (${BULKY_EVENTS.map(() => "?").join(",")}) AND job_id IN (${ended})`)
+    .run(...BULKY_EVENTS, now - 90 * DAY).changes;
+  const old = db.prepare(`DELETE FROM job_events WHERE job_id IN (${ended})`).run(now - 365 * DAY).changes;
+  return bulky + old;
+}

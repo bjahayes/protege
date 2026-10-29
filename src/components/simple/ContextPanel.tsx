@@ -253,13 +253,19 @@ export default function ContextPanel({
     onStep(null);
   };
 
+  // The keyed preview addresses (lib/preview-key.ts): the project's, and a waiting safe copy's.
+  const [urls, setUrls] = useState<{ url?: string; jobUrl?: string }>({});
   useEffect(() => {
-    if (!previewEntry || origin) return;
-    apiFetch("/api/preview-origin", { cache: "no-store" })
+    if (!previewEntry) return;
+    const q = `project=${encodeURIComponent(projectId)}${reviewJobId ? `&job=${encodeURIComponent(reviewJobId)}` : ""}`;
+    apiFetch(`/api/preview-origin?${q}`, { cache: "no-store" })
       .then((r) => r.json())
-      .then((j) => setOrigin(j.origin || null))
+      .then((j) => {
+        setOrigin(j.origin || null);
+        setUrls({ url: j.url, jobUrl: j.jobUrl });
+      })
       .catch(() => setOrigin(null));
-  }, [previewEntry, origin]);
+  }, [previewEntry, projectId, reviewJobId]);
   // A finished change: reload the app so it shows the new version.
   useEffect(() => setNonce((n) => n + 1), [moment, reviewJobId]);
 
@@ -291,9 +297,7 @@ export default function ContextPanel({
   const shownView = hasMap ? view : previewEntry ? "app" : view;
   const appSrc =
     origin && previewEntry
-      ? reviewJobId && side === "after" && shown === "changed"
-        ? `${origin}/_job/${encodeURIComponent(reviewJobId)}/`
-        : `${origin}/${encodeURIComponent(projectId)}/`
+      ? (reviewJobId && side === "after" && shown === "changed" ? urls.jobUrl : urls.url) || null
       : null;
 
   const strip = run ? (

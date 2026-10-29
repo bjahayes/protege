@@ -6,27 +6,49 @@
   color-scheme: dark;
 }
 
+/* ---------- Themes ----------
+   Every colour is a setting: --c-* are "r g b" channels for Tailwind (tailwind.config.ts), the plain
+   names are ready-made colours for CSS. Classic is the original look; Midnight is a near-black page
+   with light-edged cards, Cal Sans headings, Geist text, pill-shaped controls and one blue. */
+:root {
+  --c-bg: 11 13 16; --c-panel: 20 24 32; --c-panel-2: 27 33 43; --c-border: 38 45 56; --c-muted: 139 149 165;
+  --c-text: 230 233 238; --c-accent: 91 157 255; --c-good: 63 185 80; --c-warn: 210 153 34; --c-bad: 248 81 73; --c-running: 163 113 247;
+  --bg: rgb(var(--c-bg)); --panel: rgb(var(--c-panel)); --panel-2: rgb(var(--c-panel-2)); --border: rgb(var(--c-border));
+  --muted: rgb(var(--c-muted)); --text: rgb(var(--c-text)); --accent: rgb(var(--c-accent));
+  --good: rgb(var(--c-good)); --warn: rgb(var(--c-warn)); --bad: rgb(var(--c-bad)); --running: rgb(var(--c-running));
+  --text-2: #cfd5df; --strong: #f2f4f7; --code-bg: #11151c; --scroll: #2b3340;
+  --font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+[data-theme="midnight"] {
+  --c-bg: 7 7 7; --c-panel: 13 14 18; --c-panel-2: 20 20 24; --c-border: 34 34 42; --c-muted: 162 164 169;
+  --c-text: 255 255 255; --c-accent: 0 173 228; --c-good: 111 210 154; --c-warn: 231 184 90; --c-bad: 242 131 127; --c-running: 0 173 228;
+  --text-2: #c8cad0; --strong: #ffffff; --code-bg: #0d0e12; --scroll: #2e3038;
+  --edge: #d9dae5; --accent-ink: #c4ecf9;
+  --font-ui: var(--font-geist), "Inter", system-ui, sans-serif;
+  --font-display: var(--font-cal-sans), "Space Grotesk", system-ui, sans-serif;
+}
+
 html,
 body {
-  background: #0b0d10;
-  color: #e6e9ee;
+  background: var(--bg);
+  color: var(--text);
   -webkit-font-smoothing: antialiased;
 }
 
 body {
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--font-ui);
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: #2b3340 transparent;
+  scrollbar-color: var(--scroll) transparent;
 }
 *::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
 *::-webkit-scrollbar-thumb {
-  background: #2b3340;
+  background: var(--scroll);
   border-radius: 6px;
 }
 
@@ -43,24 +65,24 @@ body {
   font-size: 14px;
 }
 .prose-bw h1 { font-size: 1.5rem; font-weight: 700; margin: 1rem 0 0.6rem; }
-.prose-bw h2 { font-size: 1.2rem; font-weight: 650; margin: 1.2rem 0 0.5rem; border-bottom: 1px solid #262d38; padding-bottom: 0.3rem; }
+.prose-bw h2 { font-size: 1.2rem; font-weight: 650; margin: 1.2rem 0 0.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.3rem; }
 .prose-bw h3 { font-size: 1.02rem; font-weight: 600; margin: 1rem 0 0.4rem; }
-.prose-bw p { margin: 0.5rem 0; color: #cfd5df; }
-.prose-bw ul { list-style: disc; padding-left: 1.4rem; margin: 0.5rem 0; color: #cfd5df; }
-.prose-bw ol { list-style: decimal; padding-left: 1.4rem; margin: 0.5rem 0; color: #cfd5df; }
+.prose-bw p { margin: 0.5rem 0; color: var(--text-2); }
+.prose-bw ul { list-style: disc; padding-left: 1.4rem; margin: 0.5rem 0; color: var(--text-2); }
+.prose-bw ol { list-style: decimal; padding-left: 1.4rem; margin: 0.5rem 0; color: var(--text-2); }
 .prose-bw li { margin: 0.2rem 0; }
-.prose-bw code { background: #1b212b; padding: 0.1rem 0.35rem; border-radius: 4px; font-family: ui-monospace, monospace; font-size: 0.85em; color: #e6e9ee; }
-.prose-bw pre { background: #11151c; border: 1px solid #262d38; padding: 0.8rem; border-radius: 8px; overflow-x: auto; margin: 0.7rem 0; }
+.prose-bw code { background: var(--panel-2); padding: 0.1rem 0.35rem; border-radius: 4px; font-family: ui-monospace, monospace; font-size: 0.85em; color: var(--text); }
+.prose-bw pre { background: var(--code-bg); border: 1px solid var(--border); padding: 0.8rem; border-radius: 8px; overflow-x: auto; margin: 0.7rem 0; }
 .prose-bw pre code { background: transparent; padding: 0; }
-.prose-bw a { color: #5b9dff; text-decoration: underline; }
+.prose-bw a { color: var(--accent); text-decoration: underline; }
 .prose-bw table { border-collapse: collapse; margin: 0.7rem 0; display: block; overflow-x: auto; }
-.prose-bw th, .prose-bw td { border: 1px solid #262d38; padding: 0.4rem 0.7rem; text-align: left; }
-.prose-bw blockquote { border-left: 3px solid #5b9dff; padding-left: 0.9rem; color: #8b95a5; margin: 0.7rem 0; }
+.prose-bw th, .prose-bw td { border: 1px solid var(--border); padding: 0.4rem 0.7rem; text-align: left; }
+.prose-bw blockquote { border-left: 3px solid var(--accent); padding-left: 0.9rem; color: var(--muted); margin: 0.7rem 0; }
 .prose-bw input[type="checkbox"] { margin-right: 0.4rem; }
 
 /* Compact markdown for session transcript text — renders **bold**, ## headings,
    lists, code and links, scaled to fit inside message cards. */
-.tx-md { font-size: 14px; line-height: 1.55; color: #e6e9ee; }
+.tx-md { font-size: 14px; line-height: 1.55; color: var(--text); }
 .tx-md > *:first-child { margin-top: 0; }
 .tx-md > *:last-child { margin-bottom: 0; }
 .tx-md p { margin: 0.35rem 0; }
@@ -68,18 +90,18 @@ body {
 .tx-md h2 { font-size: 1.02rem; font-weight: 650; margin: 0.7rem 0 0.3rem; }
 .tx-md h3 { font-size: 0.95rem; font-weight: 600; margin: 0.6rem 0 0.25rem; }
 .tx-md h4, .tx-md h5, .tx-md h6 { font-size: 0.9rem; font-weight: 600; margin: 0.5rem 0 0.2rem; }
-.tx-md strong { font-weight: 680; color: #f2f4f7; }
+.tx-md strong { font-weight: 680; color: var(--strong); }
 .tx-md em { font-style: italic; }
 .tx-md ul { list-style: disc; padding-left: 1.3rem; margin: 0.35rem 0; }
 .tx-md ol { list-style: decimal; padding-left: 1.4rem; margin: 0.35rem 0; }
 .tx-md li { margin: 0.15rem 0; }
-.tx-md code { background: #0b0d10; border: 1px solid #262d38; padding: 0.05rem 0.3rem; border-radius: 4px; font-family: ui-monospace, monospace; font-size: 0.85em; }
-.tx-md pre { background: #0b0d10; border: 1px solid #262d38; padding: 0.6rem 0.75rem; border-radius: 8px; overflow-x: auto; margin: 0.5rem 0; }
+.tx-md code { background: var(--bg); border: 1px solid var(--border); padding: 0.05rem 0.3rem; border-radius: 4px; font-family: ui-monospace, monospace; font-size: 0.85em; }
+.tx-md pre { background: var(--bg); border: 1px solid var(--border); padding: 0.6rem 0.75rem; border-radius: 8px; overflow-x: auto; margin: 0.5rem 0; }
 .tx-md pre code { background: transparent; border: 0; padding: 0; font-size: 0.82em; line-height: 1.5; }
-.tx-md blockquote { border-left: 3px solid #5b9dff; padding-left: 0.8rem; color: #8b95a5; margin: 0.5rem 0; }
+.tx-md blockquote { border-left: 3px solid var(--accent); padding-left: 0.8rem; color: var(--muted); margin: 0.5rem 0; }
 .tx-md table { border-collapse: collapse; margin: 0.5rem 0; display: block; overflow-x: auto; font-size: 0.9em; }
-.tx-md th, .tx-md td { border: 1px solid #262d38; padding: 0.3rem 0.55rem; text-align: left; }
-.tx-md hr { border: 0; border-top: 1px solid #262d38; margin: 0.7rem 0; }
+.tx-md th, .tx-md td { border: 1px solid var(--border); padding: 0.3rem 0.55rem; text-align: left; }
+.tx-md hr { border: 0; border-top: 1px solid var(--border); margin: 0.7rem 0; }
 
 /* Simple view: live build visuals (parts map wires, glowing parts) */
 @keyframes protege-flow { to { stroke-dashoffset: -11; } }
@@ -89,7 +111,7 @@ body {
   50% { box-shadow: 0 0 0 6px rgba(91, 157, 255, 0.08); }
 }
 .protege-glow { animation: protege-glow 1.6s ease-in-out infinite; }
-.protege-wire-label { paint-order: stroke; stroke: #141820; stroke-width: 4px; stroke-linejoin: round; }
+.protege-wire-label { paint-order: stroke; stroke: var(--panel); stroke-width: 4px; stroke-linejoin: round; }
 @media (prefers-reduced-motion: reduce) {
   .protege-wire-hot, .protege-glow, .live-dot { animation: none; }
 }
@@ -97,3 +119,33 @@ body {
 /* Chat replies keep Claude's line breaks, as Claude desktop shows them. */
 .chat-md p,
 .chat-md li { white-space: pre-line; }
+
+
+/* ---------- Midnight: shapes, type and controls ---------- */
+[data-theme="midnight"] body { letter-spacing: -0.012em; }
+/* page titles: Cal Sans, wide-spaced, larger */
+[data-theme="midnight"] main h1 { font-family: var(--font-display); font-weight: 400; letter-spacing: 0.056em; line-height: 1.15; }
+[data-theme="midnight"] main h1.text-2xl, [data-theme="midnight"] main h1.text-xl { font-size: clamp(28px, 2.6vw, 40px); }
+[data-theme="midnight"] main h1.text-lg { font-size: 24px; }
+@media (max-width: 767px) { [data-theme="midnight"] main h1.text-lg { font-size: 20px; } }
+/* section labels: small capitals, spaced */
+[data-theme="midnight"] main h2.text-sm, [data-theme="midnight"] main h3.text-sm { text-transform: uppercase; letter-spacing: 0.09em; font-size: 12px; font-weight: 500; color: #aeaeb7; }
+/* cards: rounder, edged with a light hairline, no shadow */
+[data-theme="midnight"] .rounded-xl { border-radius: 16px; }
+[data-theme="midnight"] .rounded-2xl { border-radius: 20px; }
+[data-theme="midnight"] .rounded-xl.bg-panel.border, [data-theme="midnight"] .rounded-2xl.bg-panel.border { border-color: var(--edge); }
+[data-theme="midnight"] .shadow, [data-theme="midnight"] .shadow-lg, [data-theme="midnight"] .shadow-xl, [data-theme="midnight"] .shadow-2xl { box-shadow: none; }
+/* action buttons (the blue-tinted ones): pills, light blue text */
+[data-theme="midnight"] :is(button, a)[class*="bg-accent/"][class*="border-accent/"] { border-radius: 800px; color: var(--accent-ink); }
+/* secondary actions marked btn-alt: the same blue tint as the action buttons */
+[data-theme="midnight"] .btn-alt { background: rgb(var(--c-accent) / 0.09); border-color: rgb(var(--c-accent) / 0.5); color: var(--accent-ink); border-radius: 800px; }
+[data-theme="midnight"] .btn-alt:hover { background: rgb(var(--c-accent) / 0.16); color: #ffffff; }
+/* the one main action on a screen: a white pill */
+[data-theme="midnight"] .btn-main { background: #ffffff !important; color: #070707 !important; border-color: #ffffff !important; border-radius: 800px; }
+[data-theme="midnight"] .btn-main:hover { background: #e9eaee !important; }
+[data-theme="midnight"] .btn-main:disabled { opacity: 0.45; }
+/* sidebar: the current page is a pill in blue */
+[data-theme="midnight"] aside nav a { border-radius: 800px; }
+[data-theme="midnight"] aside nav a.bg-panel-2 { color: var(--accent); }
+[data-theme="midnight"] .nav-badge-warn { color: var(--accent) !important; }
+[data-theme="midnight"] .nav-badge-warn > span { background: var(--accent) !important; }

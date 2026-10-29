@@ -293,7 +293,7 @@ export default function RunForm({ projectId, gitRepo, resume, onClearResume, onL
         <button
           onClick={launch}
           disabled={busy}
-          className="px-4 py-2 rounded-lg bg-accent/20 border border-accent/40 text-accent hover:bg-accent/30 text-sm font-semibold disabled:opacity-40"
+          className="btn-main px-4 py-2 rounded-lg bg-accent/20 border border-accent/40 text-accent hover:bg-accent/30 text-sm font-semibold disabled:opacity-40"
         >
           {busy ? "Starting…" : resume ? "▶ Continue session" : agent ? `▶ Run ${agent.name}` : "▶ Run"}
         </button>
@@ -304,10 +304,10 @@ export default function RunForm({ projectId, gitRepo, resume, onClearResume, onL
           width: 100%;
           padding: 0.4rem 0.5rem;
           border-radius: 0.5rem;
-          background: #0b0d10;
-          border: 1px solid #262d38;
+          background: var(--bg);
+          border: 1px solid var(--border);
           font-size: 0.8rem;
-          color: #e6e9ee;
+          color: var(--text);
         }
         :global(.protege-select:focus) {
           outline: none;

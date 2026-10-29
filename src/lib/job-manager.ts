@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
 import { query, type Options, type PermissionMode } from "@/lib/engine";
-import { getDb } from "./store";
+import { getDb, pruneEvents } from "./store";
 import { projectIdFromPath } from "./config";
 import type { Job, JobEvent, JobKind, JobDiff } from "./types";
 import {
@@ -196,6 +196,22 @@ class JobManager {
   /** Follow-up runs (auto-continue, auto-fix) waiting to start, by the job that scheduled them. */
   private pendingFollowUps = new Map<string, ReturnType<typeof setTimeout>>();
 
+  /** Runs that have ended but are still being wrapped up (the safe copy's commit, saving, checks). */
+  private finishingJobs?: Set<string>;
+  private get finishing() {
+    return (this.finishingJobs ||= new Set());
+  }
+
+  /**
+   * What a restart must wait for besides live runs: runs still being wrapped up after Claude
+   * finished, and follow-up runs (auto-continue, auto-fix) waiting to start. A run is marked done
+   * before its commit and checks, so its status alone would let a restart cut them off.
+   */
+  wrappingUp(): Job[] {
+    const ids = new Set([...this.finishing, ...this.followUps.keys()]);
+    return [...ids].map((id) => this.get(id)).filter(Boolean) as Job[];
+  }
+
   private get followUps() {
     // An instance kept across a hot reload may predate this field.
     if (!this.pendingFollowUps) this.pendingFollowUps = new Map();
@@ -219,6 +235,16 @@ class JobManager {
 
   constructor() {
     this.reconcile();
+    // Old runs shed their bulky events now and once a day (store.ts pruneEvents).
+    const prune = () => {
+      try {
+        pruneEvents();
+      } catch {
+        /* try again tomorrow */
+      }
+    };
+    prune();
+    setInterval(prune, 24 * 60 * 60 * 1000).unref?.();
   }
 
   // Invoke a job's completion hook exactly once (used by missions).
@@ -309,7 +335,14 @@ class JobManager {
 
   getEvents(id: string): JobEvent[] {
     const l = this.live.get(id);
-    if (l) return l.events;
+    // A long live run keeps only its latest events in memory; the earlier ones come from the database,
+    // where every event is saved as it happens, so a replay always starts from the beginning.
+    if (l && (!l.events.length || l.events[0].seq === 0)) return l.events;
+    if (l) {
+      const first = l.events[0].seq;
+      const earlier = getDb().prepare(`SELECT * FROM job_events WHERE job_id = ? AND seq < ? ORDER BY seq`).all(id, first) as any[];
+      return [...earlier.map((r) => ({ seq: r.seq, ts: r.ts, type: r.type, payload: safeParse(r.payload) })), ...l.events];
+    }
     const rows = getDb().prepare(`SELECT * FROM job_events WHERE job_id = ? ORDER BY seq`).all(id) as any[];
     return rows.map((r) => ({ seq: r.seq, ts: r.ts, type: r.type, payload: safeParse(r.payload) }));
   }
@@ -495,16 +528,22 @@ class JobManager {
       this.handle(job, msg as any);
     }
 
-    if (this.isLiveStatus(stripLive(job))) {
-      job.status = job.abort.signal.aborted ? "stopped" : "done";
-      job.endedAt = job.endedAt ?? Date.now();
-      this.emit(job, "status", { status: job.status });
+    // From here until it is wrapped up, a restart waits for it (wrappingUp()).
+    this.finishing.add(job.id);
+    try {
+      if (this.isLiveStatus(stripLive(job))) {
+        job.status = job.abort.signal.aborted ? "stopped" : "done";
+        job.endedAt = job.endedAt ?? Date.now();
+        this.emit(job, "status", { status: job.status });
+      }
+      await this.finalizeWorktree(job);
+      if (direct) await this.saveDirectRun(job, direct.before);
+      this.persist(job);
+      await this.maybeAutoVerify(job);
+      this.fireDone(job);
+    } finally {
+      this.finishing.delete(job.id);
     }
-    await this.finalizeWorktree(job);
-    if (direct) await this.saveDirectRun(job, direct.before);
-    this.persist(job);
-    await this.maybeAutoVerify(job);
-    this.fireDone(job);
   }
 
   // After an isolated run, optionally run the project's checks; on failure and if

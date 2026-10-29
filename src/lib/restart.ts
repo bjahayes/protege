@@ -52,7 +52,12 @@ function busy(): string[] {
   for (const c of getChatManager().list())
     if (c.status === "working" || c.status === "starting" || c.status === "waiting")
       out.push(`a session in ${c.projectName}${c.status === "waiting" ? " (waiting for your approval)" : ""}`);
-  for (const j of getJobManager().listLive()) out.push(`a task in ${j.projectName}`);
+  const jm = getJobManager();
+  const live = jm.listLive();
+  for (const j of live) out.push(`a task in ${j.projectName}`);
+  // A task that has finished but is still saving its work or running its checks, or about to
+  // carry on (auto-fix): a restart now would cut those off.
+  for (const j of jm.wrappingUp()) if (!live.some((l) => l.id === j.id)) out.push(`a task in ${j.projectName} (saving and checking its work)`);
   return out;
 }
 

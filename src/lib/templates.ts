@@ -4,32 +4,9 @@ import { execFileSync } from "child_process";
 import { PROJECTS_ROOT, slugify } from "./config";
 import { registerProject } from "./store";
 
-// The dev server may have been launched with a reduced PATH that doesn't include
-// Git. Resolve a working `git` once (bare name first, then common Windows spots)
-// so project creation still gets a repo (needed for undo/isolation).
-const g = globalThis as unknown as { __protegeGitExe?: string | null };
-export function resolveGit(): string | null {
-  if (g.__protegeGitExe !== undefined) return g.__protegeGitExe;
-  const candidates = [
-    "git",
-    process.env.GIT,
-    process.env.ProgramFiles && path.join(process.env.ProgramFiles, "Git", "cmd", "git.exe"),
-    process.env["ProgramW6432"] && path.join(process.env["ProgramW6432"]!, "Git", "cmd", "git.exe"),
-    process.env["ProgramFiles(x86)"] && path.join(process.env["ProgramFiles(x86)"]!, "Git", "cmd", "git.exe"),
-    "C:\\Program Files\\Git\\cmd\\git.exe",
-  ].filter(Boolean) as string[];
-  for (const c of candidates) {
-    try {
-      execFileSync(c, ["--version"], { stdio: "ignore" });
-      g.__protegeGitExe = c;
-      return c;
-    } catch {
-      /* try next */
-    }
-  }
-  g.__protegeGitExe = null;
-  return null;
-}
+// Which git to run comes from lib/git-bin.ts (with Git for Windows' usual folders as a fallback).
+export { resolveGit } from "./git-bin";
+import { resolveGit } from "./git-bin";
 
 // ---------------------------------------------------------------------------
 // Friendly starter templates. Every template scaffolds a *working* project so

@@ -6,8 +6,9 @@
 
 import http from "http";
 import fs from "fs";
-import { contentTypeFor, injectBase, isHtml, resolvePreviewFile } from "./preview";
+import { contentTypeFor, injectBase, isHtml, resolvePreviewFile, tooBroad } from "./preview";
 import { projectDir } from "./project-guard";
+import { previewKeyOk, previewPath } from "./preview-key";
 
 export function appPort(): number {
   return Number(process.env.PROTEGE_PORT || process.env.PORT || 4317);
@@ -41,24 +42,30 @@ export function startPreviewServer(): void {
       if (req.method !== "GET" && req.method !== "HEAD") return send(405, "Previews are read-only.");
       const url = new URL(req.url || "/", "http://127.0.0.1");
       const segs = url.pathname.split("/").filter(Boolean).map(decodeURIComponent);
-      // /_job/<job id>/… is a task's safe copy, while it's waiting for Keep or Throw away, so the
-      // change can be seen working beside the project as it was.
+      // Every address carries a key made for that one project or safe copy (lib/preview-key.ts), so a
+      // page being previewed can't reach another project's files.
+      //   /<key>/<project id>/…          a project
+      //   /_job/<key>/<job id>/…         a task's safe copy, while it waits for Keep or Throw away
       let dir: string | null;
       let base: string;
       let parts: string[];
       if (segs[0] === "_job") {
+        if (!previewKeyOk("job", segs[2] || "", segs[1] || "")) return send(404, "Unknown preview.");
         const { getJobManager } = await import("./job-manager");
-        const job = getJobManager().get(segs[1] || "");
+        const job = getJobManager().get(segs[2] || "");
         dir = job?.worktreeState === "active" && job.worktreePath ? job.worktreePath : null;
-        base = `/_job/${encodeURIComponent(segs[1] || "")}/`;
-        parts = segs.slice(2);
+        base = previewPath("job", segs[2] || "");
+        parts = segs.slice(3);
         if (!dir || !fs.existsSync(dir)) return send(404, "This change has been kept or thrown away, so its copy is gone.");
       } else {
-        dir = await projectDir(segs[0]);
-        base = `/${encodeURIComponent(segs[0] || "")}/`;
-        parts = segs.slice(1);
+        if (!previewKeyOk("project", segs[1] || "", segs[0] || "")) return send(404, "Unknown preview.");
+        dir = await projectDir(segs[1]);
+        base = previewPath("project", segs[1] || "");
+        parts = segs.slice(2);
         if (!dir || !fs.existsSync(dir)) return send(404, "Unknown project.");
       }
+      // A folder that holds far more than one project (your home folder, a drive) is never served.
+      if (tooBroad(dir)) return send(403, "This folder is too broad to preview.");
       const file = resolvePreviewFile(dir, parts);
       if (!file) return send(404, "Nothing to preview here yet.");
       if (isHtml(file)) return send(200, injectBase(fs.readFileSync(file, "utf8"), base), contentTypeFor(file));

@@ -187,7 +187,7 @@ export function SimpleReview({
             <button
               onClick={() => apply()}
               disabled={state === "busy"}
-              className="px-4 py-2.5 rounded-xl bg-good/15 border border-good/40 text-good hover:bg-good/25 text-sm font-semibold disabled:opacity-50"
+              className="btn-main px-4 py-2.5 rounded-xl bg-good/15 border border-good/40 text-good hover:bg-good/25 text-sm font-semibold disabled:opacity-50"
             >
               ✓ Keep these changes
             </button>

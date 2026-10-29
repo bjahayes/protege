@@ -20,7 +20,9 @@ via the Claude Agent SDK.
   `PROTEGE_DIST_DIR=.next-test node scripts/serve.mjs next start -H 127.0.0.1 -p 4327` (previews on 4328); stop it
   when done, delete `.next-test`, and put back `tsconfig.json` (the build adds `.next-test/types` to it). To make the running Protégé load your change, run `npm run restart`: it builds the new version while the old one keeps serving, waits until no session or task is mid-turn (yours finishes its reply first), then restarts on it. Sessions carry on from their saved history. The person can do the same with **Load latest version** in the sidebar.
 - Typecheck: `npx tsc --noEmit`
-- Tests (no model calls): `npm test` (arrow layout + Keep on a throwaway repo + the context panel's replay, plan and steps)
+- Tests (no model calls): `npm test` (arrow layout + Keep on a throwaway repo + the context panel's replay, plan and steps
+  + `test:safety`: preview keys and files, noise filter, restore). Run Keep's with
+  `PROTEGE_SAFE_COPIES=$(pwd)/data/test-safe-copies` so test copies stay out of `~/.protege`.
 - Build: `npm run build`
 
 ## Stack
@@ -167,3 +169,30 @@ via the Claude Agent SDK.
 - **2026-10-29:** Job runs append Protégé's briefing to Claude Code's system prompt
   (`{ type: "preset", preset: "claude_code", append }`). A plain string `systemPrompt` replaces Claude Code's own
   instructions entirely; it did for every task and agent run until this date.
+- **2026-10-29 (safety fixes):** Always pass a permission mode: `engine.ts` once left it out for "default", so
+  the person's own `acceptEdits` applied. Document and report agents run with `dontAsk` + an allow-list (Read/Glob/
+  Grep, Edit/Write of their file); anything else is refused, not asked.
+- **2026-10-29:** Preview addresses carry a key (`lib/preview-key.ts`, HMAC of the install key over the project or
+  job id): `/<key>/<project id>/` and `/_job/<key>/<job id>/`. Get them from `GET /api/preview-origin?project=` or
+  `?job=`; never build a preview URL by hand. `resolvePreviewFile` refuses dot-paths, `node_modules` and key files;
+  `tooBroad` (preview.ts) refuses a home folder, a drive root or any folder above home.
+- **2026-10-29:** A finished job is still busy while its safe copy is committed and checked:
+  `JobManager.wrappingUp()` lists those, and `restart.ts busy()` waits for them.
+- **2026-10-29:** Safe copies live in `~/.protege/safe-copies` (`PROTEGE_SAFE_COPIES` overrides). The project's
+  `node_modules` is linked in (a junction on Windows) when git ignores it. `git worktree remove --force` deletes
+  the target *through* a junction: `removeWorktree` unlinks first; keep it that way.
+- **2026-10-29:** Notes go into a safe copy with a manifest (`.protege/.from-project.json`: hashes and the checklist
+  as it was); Keep copies back only notes the task changed and merges `tasks.json` three ways (`mergeTasks`).
+- **2026-10-29:** Run git through `gitExe()` (`lib/git-bin.ts`), which finds Git for Windows when it isn't on PATH.
+- **2026-10-29:** `pruneEvents` (store.ts) runs at start-up and daily: bulky events after 90 days, all after 365.
+  A live job's `getEvents` merges saved rows older than the 3,000 kept in memory.
+- **2026-10-29:** Sign-in (`startLogin`) runs `claude auth login` hidden, shows its link and a code box, and falls back
+  to a window if no link appears in 20 s or it fails.
+- **2026-10-29:** Two looks, Classic and Midnight (the "Look" switch in both sidebars; kept per browser in
+  `protege.theme`; `?theme=midnight|classic` sets it). Tailwind colours are `rgb(var(--c-NAME) / <alpha-value>)`
+  set in `globals.css` (`:root` = Classic, `[data-theme="midnight"]` on `<html>`, applied by an inline script in
+  `layout.tsx` before the page draws). Never hard-code a colour: use the Tailwind names or `var(--good)` etc.
+  Midnight's fonts (Geist, Cal Sans) come from `next/font/google` and are served by Protégé itself. Mark each
+  screen's one main action `btn-main` (white pill in Midnight) and secondary tinted buttons `btn-alt`. Code that
+  works out colours (Mermaid) reads the CSS variables and redraws on the `protege-theme` event.
+  `SWEEP_THEME=midnight node scripts/ui-sweep.mjs` sweeps the layout in that look.

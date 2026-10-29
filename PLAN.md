@@ -56,10 +56,10 @@
 - [ ] Context-window % per live agent (a key "when to intervene" signal)
 - [ ] True push (VAPID) so notifications fire with all tabs closed (today: needs one tab open)
 - [ ] Per-project settings: default model, permission mode, allowed tools
-- [ ] Prune/retain `job_events` (unbounded today)
+- [x] Prune/retain `job_events` (`pruneEvents`, 2026-10-29)
 
 ## Phase 3 — Parallelism with isolation & review
-- [ ] Git-worktree isolation per agent (one worktree = one branch = one agent)
+- [x] Git-worktree isolation per agent (one worktree = one branch = one agent): the safe copies
 - [ ] Per-job diff review with syntax highlighting; stage/discard; merge gate
 - [ ] Inline diff comments that round-trip to the agent (Conductor-style)
 - [ ] Live permission prompts surfaced in UI (`canUseTool`) — approve/deny per action
@@ -210,6 +210,25 @@ view is the power-user side of the same app.)
       (remembered; open by default on windows 1600 px wide or more); the file-changes panel takes its place while
       open. **Talk about this part** puts an "About:" chip on the message box. The Code page's list of sessions can
       be hidden («/») to give the chat and panel room.
+- [x] **Safety and lost-work fixes** (2026-10-29), from a review of the code:
+      1. Document and report agents could edit more than their one file when Claude Code's own default was to
+         accept edits (Protégé left the mode out when it was "default"). They now run with `dontAsk` and only
+         Read/Glob/Grep plus Edit/Write of their file; the mode is always passed. Tested with a real run.
+      2. A preview opened in its own tab could read any known project's files, `.env` included. Preview
+         addresses now carry a key made from the install's access key for that one project or safe copy;
+         hidden files, key files and `node_modules` are never served; a home folder or drive is refused.
+      3. A restart could cut off a task's last commit or checks. Jobs being finished are now listed as busy.
+      4. Keeping two safe copies of one project overwrote the first one's checklist ticks. Keep copies back only
+         the notes the task changed and merges the checklist three ways (`mergeTasks`).
+      5. Restoring a document version overwrote unsaved edits. The current text is saved as a version first.
+      6. Safe copies had no `node_modules`, so checks failed: the project's is linked in (and unlinked before
+         removal, since `git worktree remove` deletes through the link).
+      7. Safe copies moved from the system temp folder to `~/.protege/safe-copies`.
+      8. The noise filter now knows macOS and Linux temp folders and the new safe-copy folder.
+      9. Every git call uses `gitExe()` (finds Git for Windows when it isn't on PATH).
+      10. A live job's replay merges saved events older than the 3,000 kept in memory.
+      11. `job_events` is pruned (`pruneEvents`: bulky events after 90 days, all after a year).
+      12. Sign-in runs out of sight with a link and code box, falling back to a window.
 - [ ] Next: larger-type/accessibility pass; hide cost/tokens fully in Simple mode; filter project pickers to
       real (registered/recent) projects; preview for projects that need a dev server (not just static);
       a phone layout for the Simple shell (its sidebar takes 240 of 375 px); Code-page chats in demo projects
@@ -222,5 +241,5 @@ stays software; only the UX gets gentler.
 ## Backlog
 - [ ] Multi-machine session mirroring via `SessionStore`
 - [ ] Subagent drill-down (`getSubagentMessages`)
-- [ ] Enforce path allow-listing for job launches (DESIGN promises it; not yet enforced)
+- [x] Enforce path allow-listing for job launches (`projectDir`: known projects only)
 - [ ] Export a project's status/assessment as a shareable report

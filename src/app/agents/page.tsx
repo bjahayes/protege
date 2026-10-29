@@ -398,7 +398,7 @@ function AgentPanel({
         <button
           onClick={run}
           disabled={busy || !projectId || (!!a.input?.required && !input.trim())}
-          className="mt-3 px-4 py-2 rounded-lg bg-accent/20 border border-accent/40 text-accent hover:bg-accent/30 text-sm font-semibold disabled:opacity-50"
+          className="btn-main mt-3 px-4 py-2 rounded-lg bg-accent/20 border border-accent/40 text-accent hover:bg-accent/30 text-sm font-semibold disabled:opacity-50"
         >
           {busy ? "Starting…" : `▶ Run ${a.name}`}
         </button>

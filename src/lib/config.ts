@@ -31,6 +31,13 @@ export function pathFromProjectId(id: string): string {
 // the claude config dir itself, and dependency folders.
 const NOISE_PATTERNS = [
   /[\\/]AppData[\\/]Local[\\/]Temp/i,
+  // Protégé's safe copies, wherever they are (now ~/.protege/safe-copies; earlier the temp folder),
+  // and the temp folders of macOS and Linux, where Claude Code may record them as folders it ran in.
+  /[\\/]\.protege[\\/]safe-copies([\\/]|$)/i,
+  /[\\/]protege-worktrees([\\/]|$)/i,
+  /^\/(private\/)?tmp\//,
+  /^\/(private\/)?var\/folders\//,
+  /^\/var\/tmp\//,
   /[\\/]scratchpad/i,
   /[\\/]\.claude[\\/]/i,
   /[\\/]node_modules[\\/]/i,

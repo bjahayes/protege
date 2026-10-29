@@ -16,7 +16,8 @@ const base = process.argv[2] || "http://127.0.0.1:4327";
 const out = path.resolve(process.argv[3] || "data/ui-sweep");
 fs.mkdirSync(out, { recursive: true });
 const id = (p) => Buffer.from(p).toString("base64url");
-const bw = id("C:\\Users\\Ben\\Buildwork");
+// Protégé's own folder (the sweep runs from it), shown as a project.
+const bw = id(process.cwd());
 
 const extra = (process.env.SWEEP_PAGES || "").split(",").filter(Boolean);
 const PAGES = extra.length
@@ -151,6 +152,8 @@ for (const size of SIZES) {
       }
     } catch {}
   });
+  // SWEEP_THEME=midnight checks every page in that look.
+  if (process.env.SWEEP_THEME) await ctx.addInitScript((t) => { try { localStorage.setItem("protege.theme", t); } catch {} }, process.env.SWEEP_THEME);
   const page = await ctx.newPage();
   const errors = [];
   page.on("pageerror", (e) => errors.push(String(e.message).slice(0, 200)));

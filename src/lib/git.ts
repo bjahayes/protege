@@ -3,12 +3,14 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import { promisify } from "util";
+import { createHash } from "crypto";
 import type { DiffFile, JobDiff } from "./types";
+import { gitExe } from "./git-bin";
 
 const pexec = promisify(execFile);
 
 async function git(cwd: string, args: string[]): Promise<{ stdout: string; stderr: string }> {
-  return pexec("git", args, { cwd, maxBuffer: 1024 * 1024 * 64, windowsHide: true });
+  return pexec(gitExe(), args, { cwd, maxBuffer: 1024 * 1024 * 64, windowsHide: true });
 }
 
 export async function isGitRepo(dir: string): Promise<boolean> {
@@ -115,7 +117,7 @@ export async function excludeNotes(repo: string): Promise<void> {
   }
 }
 
-/** Copy Protégé's notes from one checkout to another (into a safe copy, or back on Keep). */
+/** Copy Protégé's notes from one checkout to another, whole (used for checkpoints and tests). */
 export function copyNotes(from: string, to: string): void {
   for (const d of META_DIRS) {
     const src = path.join(from, d);
@@ -128,7 +130,154 @@ export function copyNotes(from: string, to: string): void {
   }
 }
 
-const WT_ROOT = path.join(os.tmpdir(), "protege-worktrees");
+// What a safe copy's notes looked like when it was made: each file's fingerprint, and the checklist
+// itself. Keep copies back only the notes the task changed, and merges the checklist, so two safe
+// copies of one project kept one after the other don't undo each other's ticks (or any other note
+// changed in the project meanwhile).
+const NOTES_MANIFEST = ".from-project.json";
+const TASKS = "tasks.json";
+const fingerprint = (buf: Buffer) => createHash("sha1").update(buf).digest("hex");
+
+function noteFiles(root: string): string[] {
+  const out: string[] = [];
+  const walk = (dir: string, rel: string) => {
+    if (!fs.existsSync(dir)) return;
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      const r = rel ? `${rel}/${e.name}` : e.name;
+      if (r === "checkpoints" || r === NOTES_MANIFEST) continue;
+      if (e.isDirectory()) walk(path.join(dir, e.name), r);
+      else if (e.isFile()) out.push(r);
+    }
+  };
+  for (const d of META_DIRS) walk(path.join(root, d), "");
+  return out;
+}
+
+/** Copy the project's notes into a new safe copy, recording what each looked like. */
+export function copyNotesIn(repo: string, worktreePath: string): void {
+  copyNotes(repo, worktreePath);
+  const dir = path.join(worktreePath, META_DIRS[0]);
+  if (!fs.existsSync(dir)) return;
+  const hashes: Record<string, string> = {};
+  for (const r of noteFiles(worktreePath)) hashes[r] = fingerprint(fs.readFileSync(path.join(dir, r)));
+  let tasks: unknown = null;
+  try {
+    tasks = JSON.parse(fs.readFileSync(path.join(dir, TASKS), "utf8"));
+  } catch {
+    /* no checklist */
+  }
+  fs.writeFileSync(path.join(dir, NOTES_MANIFEST), JSON.stringify({ hashes, tasks }));
+}
+
+type TaskItem = { id: string; [k: string]: unknown };
+const taskList = (j: any): TaskItem[] => (Array.isArray(j?.tasks) ? j.tasks.filter((t: any) => t && t.id != null) : []);
+
+/**
+ * The checklist after Keep: the project's current list, with what the task changed applied on top
+ * (items it added, changed or removed since its safe copy was made). Items the task didn't touch
+ * keep the project's version, ticks made meanwhile included.
+ */
+export function mergeTasks(base: any, ours: any, theirs: any): any {
+  const b = new Map(taskList(base).map((t) => [String(t.id), t]));
+  const o = taskList(ours); // the project now
+  const t = new Map(taskList(theirs).map((x) => [String(x.id), x])); // the safe copy
+  const same = (x: unknown, y: unknown) => JSON.stringify(x) === JSON.stringify(y);
+  const out: TaskItem[] = [];
+  for (const item of o) {
+    const id = String(item.id);
+    const was = b.get(id);
+    const now = t.get(id);
+    if (!now) {
+      if (was) continue; // the task removed it
+      out.push(item); // added in the project meanwhile
+    } else out.push(was && same(was, now) ? item : now); // the task's version only where it changed it
+  }
+  const have = new Set(out.map((x) => String(x.id)));
+  for (const [id, item] of t) if (!have.has(id) && !b.has(id)) out.push(item); // the task added it
+  return { ...(theirs && typeof theirs === "object" ? theirs : {}), ...(ours && typeof ours === "object" ? ours : {}), tasks: out };
+}
+
+/** Copy back, on Keep, only the notes the task changed; merge the checklist. */
+export function copyNotesBack(worktreePath: string, repo: string): void {
+  const src = path.join(worktreePath, META_DIRS[0]);
+  const dst = path.join(repo, META_DIRS[0]);
+  let manifest: { hashes: Record<string, string>; tasks: unknown } | null = null;
+  try {
+    manifest = JSON.parse(fs.readFileSync(path.join(src, NOTES_MANIFEST), "utf8"));
+  } catch {
+    /* a safe copy from before manifests: copy everything back, as before */
+  }
+  if (!manifest) return copyNotes(worktreePath, repo);
+  for (const r of noteFiles(worktreePath)) {
+    const from = path.join(src, r);
+    const buf = fs.readFileSync(from);
+    if (manifest.hashes[r] === fingerprint(buf)) continue; // the task didn't change it
+    const to = path.join(dst, r);
+    fs.mkdirSync(path.dirname(to), { recursive: true });
+    if (r === TASKS && fs.existsSync(to)) {
+      try {
+        const merged = mergeTasks(manifest.tasks, JSON.parse(fs.readFileSync(to, "utf8")), JSON.parse(buf.toString("utf8")));
+        fs.writeFileSync(to, JSON.stringify(merged, null, 2));
+        continue;
+      } catch {
+        /* unreadable: fall through and take the task's */
+      }
+    }
+    fs.writeFileSync(to, buf);
+  }
+}
+
+/**
+ * Where safe copies live: in your own folder, not the system's temp folder (which Windows' Storage
+ * Sense and macOS clear out, taking a change still waiting for Keep with them).
+ * PROTEGE_SAFE_COPIES overrides it. config.ts's noise filter keeps these folders out of the projects.
+ */
+export const WT_ROOT = process.env.PROTEGE_SAFE_COPIES || path.join(os.homedir(), ".protege", "safe-copies");
+
+/** Dependency folders a safe copy shares with its project (linked, not copied: they're large). */
+const SHARED_DEPS = ["node_modules"];
+
+/**
+ * Link the project's dependency folders into a fresh safe copy, so its checks can run (without them
+ * every check fails and auto-fix tries to "fix" the change). Only a folder git ignores is linked,
+ * and the link itself is kept out of git, so it's never committed.
+ */
+async function linkDependencies(repo: string, worktreePath: string): Promise<void> {
+  for (const name of SHARED_DEPS) {
+    const src = path.join(repo, name);
+    const dst = path.join(worktreePath, name);
+    try {
+      if (!fs.existsSync(src) || fs.lstatSync(src).isSymbolicLink() || !fs.statSync(src).isDirectory() || fs.existsSync(dst)) continue;
+      await git(repo, ["check-ignore", "-q", name]); // throws unless git ignores it
+      await excludeFromGit(repo, `/${name}`);
+      fs.symlinkSync(src, dst, process.platform === "win32" ? "junction" : "dir");
+    } catch {
+      /* not ignored, or can't link: the safe copy goes without */
+    }
+  }
+}
+
+/** Remove a safe copy's links to its project's dependency folders (only links, never real folders). */
+export function unlinkDependencies(worktreePath: string): void {
+  for (const name of SHARED_DEPS) {
+    const p = path.join(worktreePath, name);
+    try {
+      if (fs.lstatSync(p).isSymbolicLink()) fs.unlinkSync(p);
+    } catch {
+      /* not there */
+    }
+  }
+}
+
+/** Add a line to the repository's own ignore list (.git/info/exclude), once. */
+async function excludeFromGit(repo: string, line: string): Promise<void> {
+  const { stdout: common } = await git(repo, ["rev-parse", "--git-common-dir"]);
+  const file = path.join(path.resolve(repo, common.trim()), "info", "exclude");
+  const have = fs.existsSync(file) ? fs.readFileSync(file, "utf8") : "";
+  if (have.split(/\r?\n/).includes(line)) return;
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.appendFileSync(file, `${have && !have.endsWith("\n") ? "\n" : ""}${line}\n`);
+}
 
 export interface WorktreeHandle {
   worktreePath: string;
@@ -146,7 +295,8 @@ export async function createWorktree(repo: string, jobId: string): Promise<Workt
   await excludeNotes(repo);
   await git(repo, ["worktree", "add", "-b", branch, worktreePath, base]);
   // The notes aren't in git, so the new checkout doesn't have them; give it the project's.
-  copyNotes(repo, worktreePath);
+  copyNotesIn(repo, worktreePath);
+  await linkDependencies(repo, worktreePath);
   return { worktreePath, branch, baseRef: base };
 }
 
@@ -318,7 +468,7 @@ export async function applyWorktree(
     if (opts.worktreePath && fs.existsSync(opts.worktreePath)) {
       for (let attempt = 1; attempt <= 3; attempt++) {
         try {
-          copyNotes(opts.worktreePath, repo);
+          copyNotesBack(opts.worktreePath, repo);
           break;
         } catch {
           if (attempt < 3) await new Promise((r) => setTimeout(r, 300 * attempt));
@@ -362,6 +512,9 @@ export async function revertJobChange(repo: string, baseRef?: string, branch?: s
 /** Remove the worktree and delete its branch. */
 export async function removeWorktree(repo: string, worktreePath?: string, branch?: string): Promise<void> {
   if (worktreePath) {
+    // First the links to the project's dependency folders: `git worktree remove --force` deletes
+    // through a link, which would empty the project's own node_modules.
+    unlinkDependencies(worktreePath);
     try {
       await git(repo, ["worktree", "remove", "--force", worktreePath]);
     } catch {

@@ -22,11 +22,11 @@ interface InboxItem {
 }
 
 const TYPE_META: Record<string, { label: string; color: string; icon: string }> = {
-  approve: { label: "Needs your OK", color: "#a78bfa", icon: "✋" },
-  stuck: { label: "Possibly stuck", color: "#d29922", icon: "⚠" },
-  review: { label: "Review changes", color: "#3fb950", icon: "⎇" },
-  checks: { label: "Checks failed", color: "#f85149", icon: "✗" },
-  failed: { label: "Failed", color: "#f85149", icon: "✗" },
+  approve: { label: "Needs your OK", color: "var(--running)", icon: "✋" },
+  stuck: { label: "Possibly stuck", color: "var(--warn)", icon: "⚠" },
+  review: { label: "Review changes", color: "var(--good)", icon: "⎇" },
+  checks: { label: "Checks failed", color: "var(--bad)", icon: "✗" },
+  failed: { label: "Failed", color: "var(--bad)", icon: "✗" },
 };
 
 export default function InboxPage() {
@@ -82,7 +82,7 @@ export default function InboxPage() {
                       style={{ borderLeft: `3px solid ${m.color}` }}
                     >
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-medium px-1.5 py-0.5 rounded" style={{ background: m.color + "22", color: m.color }}>
+                        <span className="text-xs font-medium px-1.5 py-0.5 rounded" style={{ background: `color-mix(in srgb, ${m.color} 13%, transparent)`, color: m.color }}>
                           {m.icon} {m.label}
                         </span>
                         <span className="text-sm text-muted">{it.projectName}</span>
