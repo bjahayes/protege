@@ -193,7 +193,7 @@ via the Claude Agent SDK.
   set in `globals.css` (`:root` = Classic, `[data-theme="midnight"]` on `<html>`, applied by an inline script in
   `layout.tsx` before the page draws). Never hard-code a colour: use the Tailwind names or `var(--good)` etc.
   Midnight's fonts (Geist, Cal Sans) come from `next/font/google` and are served by Protégé itself. Mark each
-  screen's one main action `btn-main` (white pill in Midnight) and secondary tinted buttons `btn-alt`. Code that
+  screen's one main action `btn-main` (white in Midnight) and secondary tinted buttons `btn-alt`. Code that
   works out colours (Mermaid) reads the CSS variables and redraws on the `protege-theme` event.
   `SWEEP_THEME=midnight node scripts/ui-sweep.mjs` sweeps the layout in that look.
 - **2026-10-29:** Settings (`components/SettingsMenu.tsx`, the ⚙ button at the foot of both sidebars) holds Look,
@@ -204,6 +204,6 @@ via the Claude Agent SDK.
 - **2026-10-30:** Paper is `[data-theme="paper"]` (light: Newsreader headings and reading text, Source Sans 3, square
   edges, deep red accent, ink-black `btn-main`). `--c-running` is "happening now" (live dot, the step under way,
   parts being changed): the logo's lilac in Midnight, a deeper lilac in Paper; links and the current page stay accent.
-  Midnight's pill rule for tinted buttons must never reach cards: it once matched `bg-accent/5 hover:border-accent/50`
-  on parts-map cards and drew them as ovals. `data/tmp`-style checks: no element over 60 px tall may have a radius
+  No pill-shaped controls (2026-10-30): Midnight's pill rule once matched `bg-accent/5 hover:border-accent/50`
+  on parts-map cards and drew them as ovals; controls and cards keep rounded rectangles in every look. `data/tmp`-style checks: no element over 60 px tall may have a radius
   of half its height.

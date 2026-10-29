@@ -1,7 +1,7 @@
 "use client";
 
 // How Protégé looks: Classic (the original dark look), Midnight (near-black, Cal Sans headings,
-// pill-shaped controls) or Paper (light: warm paper, serif headings, square edges, one deep red). Kept in this browser; the layout applies it before the
+// rounded-rectangle controls) or Paper (light: warm paper, serif headings, square edges, one deep red). Kept in this browser; the layout applies it before the
 // page draws (see THEME_SCRIPT in app/layout.tsx). Shown in Settings.
 
 import { useEffect, useState } from "react";

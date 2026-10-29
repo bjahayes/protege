@@ -9,7 +9,7 @@
 /* ---------- Themes ----------
    Every colour is a setting: --c-* are "r g b" channels for Tailwind (tailwind.config.ts), the plain
    names are ready-made colours for CSS. Classic is the original look; Midnight is a near-black page
-   with light-edged cards, Cal Sans headings, Geist text, pill-shaped controls and one blue. */
+   with light-edged cards, Cal Sans headings, Geist text, rounded-rectangle controls and one blue. */
 :root {
   --c-bg: 11 13 16; --c-panel: 20 24 32; --c-panel-2: 27 33 43; --c-border: 38 45 56; --c-muted: 139 149 165;
   --c-text: 230 233 238; --c-accent: 91 157 255; --c-good: 63 185 80; --c-warn: 210 153 34; --c-bad: 248 81 73; --c-running: 163 113 247;
@@ -150,21 +150,22 @@ body {
 /* cards: rounder, edged with a light hairline, no shadow */
 [data-theme="midnight"] .rounded-xl { border-radius: 16px; }
 [data-theme="midnight"] .rounded-2xl { border-radius: 20px; }
+/* buttons keep the ordinary rounding: 16px on a 34px button reads as a pill */
+[data-theme="midnight"] :is(button, a).rounded-xl { border-radius: 0.75rem; }
 [data-theme="midnight"] .rounded-xl.bg-panel.border, [data-theme="midnight"] .rounded-2xl.bg-panel.border { border-color: var(--edge); }
 [data-theme="midnight"] .shadow, [data-theme="midnight"] .shadow-lg, [data-theme="midnight"] .shadow-xl, [data-theme="midnight"] .shadow-2xl { box-shadow: none; }
-/* action buttons (the blue-tinted ones): pills, light blue text */
-/* Tinted blue buttons become pills. Only small controls: a class's own border-accent/ (not hover:border-accent/),
-   and never cards (rounded-xl / rounded-2xl), which once turned the parts-map cards into ovals. */
-[data-theme="midnight"] :is(button, a):is([class^="border-accent/"], [class*=" border-accent/"])[class*="bg-accent/"]:not(.rounded-xl, .rounded-2xl) { border-radius: 800px; color: var(--accent-ink); }
+/* action buttons (the blue-tinted ones): light blue text. Only small controls: a class's own border-accent/
+   (not hover:border-accent/), and never cards (rounded-xl / rounded-2xl). Controls keep their rounded-rectangle
+   shape in every look: pill shapes once turned the parts-map cards into ovals and were dropped. */
+[data-theme="midnight"] :is(button, a):is([class^="border-accent/"], [class*=" border-accent/"])[class*="bg-accent/"]:not(.rounded-xl, .rounded-2xl) { color: var(--accent-ink); }
 /* secondary actions marked btn-alt: the same blue tint as the action buttons */
-[data-theme="midnight"] .btn-alt { background: rgb(var(--c-accent) / 0.09); border-color: rgb(var(--c-accent) / 0.5); color: var(--accent-ink); border-radius: 800px; }
+[data-theme="midnight"] .btn-alt { background: rgb(var(--c-accent) / 0.09); border-color: rgb(var(--c-accent) / 0.5); color: var(--accent-ink); }
 [data-theme="midnight"] .btn-alt:hover { background: rgb(var(--c-accent) / 0.16); color: #ffffff; }
-/* the one main action on a screen: a white pill */
-[data-theme="midnight"] .btn-main { background: #ffffff !important; color: #070707 !important; border-color: #ffffff !important; border-radius: 800px; }
+/* the one main action on a screen: white */
+[data-theme="midnight"] .btn-main { background: #ffffff !important; color: #070707 !important; border-color: #ffffff !important; }
 [data-theme="midnight"] .btn-main:hover { background: #e9eaee !important; }
 [data-theme="midnight"] .btn-main:disabled { opacity: 0.45; }
-/* sidebar: the current page is a pill in blue */
-[data-theme="midnight"] aside nav a { border-radius: 800px; }
+/* sidebar: the current page in blue */
 [data-theme="midnight"] aside nav a.bg-panel-2 { color: var(--accent); }
 [data-theme="midnight"] .nav-badge-warn { color: var(--accent) !important; }
 [data-theme="midnight"] .nav-badge-warn > span { background: var(--accent) !important; }
