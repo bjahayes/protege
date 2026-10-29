@@ -42,6 +42,18 @@ body {
   font-family: var(--font-ui);
 }
 
+/* The Protégé name: spaced capitals in periwinkle with a bar on the left, the same in both looks. */
+.brand-mark {
+  display: block;
+  font: 600 13.5px/1.2 var(--font-brand), system-ui, sans-serif;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: #8ea4ff;
+  border-left: 3px solid #8ea4ff;
+  padding-left: 12px;
+  margin-left: -8px;
+}
+
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--scroll) transparent;

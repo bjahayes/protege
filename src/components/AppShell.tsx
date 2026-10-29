@@ -36,8 +36,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         }`}
       >
         <Link href={simple ? "/simple" : "/"} className="px-5 py-4 border-b border-border block">
-          <div className="text-lg font-bold tracking-tight">Protégé</div>
-          <div className="text-[11px] text-muted -mt-0.5">{simple ? "Build things, simply" : "Claude Code mission control"}</div>
+          <div className="brand-mark">Protégé</div>
+          <div className="text-[12.5px] text-muted mt-[5px]">{simple ? "Build things, simply" : "Claude Code mission control"}</div>
         </Link>
 
         {simple ? <SimpleSidebar /> : <SidebarNav />}
@@ -81,7 +81,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           >
             ☰
           </button>
-          <Link href={simple ? "/simple" : "/"} className="font-bold tracking-tight">
+          <Link href={simple ? "/simple" : "/"} className="brand-mark">
             Protégé
           </Link>
         </div>
