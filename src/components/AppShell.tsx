@@ -11,8 +11,7 @@ import GuideHelper from "./GuideHelper";
 import SignInBanner from "./SignInBanner";
 import RestartButton from "./RestartButton";
 import { DemoNotice } from "./DemoBar";
-import ExplainStyleToggle from "./ExplainStyleToggle";
-import ThemeToggle from "./ThemeToggle";
+import SettingsMenu from "./SettingsMenu";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -52,14 +51,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               </div>
             </div>
           )}
-          {!simple && (
-            <div className="p-3 flex flex-col gap-2">
-              <ExplainStyleToggle />
-              <ThemeToggle />
-              <NotificationCenter />
-              <RestartButton />
-            </div>
-          )}
+          <div className="px-3 pt-3 flex flex-col gap-2">
+            <SettingsMenu simple={simple} />
+            {!simple && <RestartButton statusOnly />}
+          </div>
           <div className="px-3 py-3">
             <Link
               href={simple ? "/" : "/simple"}
@@ -72,11 +67,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               {simple ? "Switch to full view →" : "✦ Switch to simple view"}
             </Link>
           </div>
-          {!simple && (
-            <div className="px-3 pb-3 text-[11px] text-muted leading-relaxed">
-              Runs jobs with your existing Claude Code login. Localhost only.
-            </div>
-          )}
         </div>
       </aside>
 
@@ -102,6 +92,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           {children}
         </div>
       </main>
+      <NotificationCenter />
       {!simple && <CommandBar />}
       {simple && <GuideHelper />}
     </div>

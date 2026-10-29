@@ -4,12 +4,15 @@ import { apiFetch } from "@/lib/api-client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Job } from "@/lib/types";
 import { runTitle } from "@/lib/agents";
+import Choice from "./Choice";
 
 const NOTIFY_STATES = new Set(["done", "error", "idle"]);
 const LS_KEY = "protege_notify_enabled";
+const EVENT = "protege-alerts";
 
+// Watches the jobs and raises a browser alert when one finishes, fails or needs the person.
+// Always mounted (AppShell); the switch that turns it on is AlertsSwitch, in Settings.
 export default function NotificationCenter() {
-  const [supported, setSupported] = useState(false);
   const [permission, setPermission] = useState<NotificationPermission>("default");
   const [enabled, setEnabled] = useState(false);
 
@@ -20,12 +23,18 @@ export default function NotificationCenter() {
   // Register SW + read initial permission/preference.
   useEffect(() => {
     if (typeof window === "undefined" || !("Notification" in window)) return;
-    setSupported(true);
     setPermission(Notification.permission);
     setEnabled(localStorage.getItem(LS_KEY) === "1");
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("/sw.js").catch(() => {});
     }
+    const changed = () => {
+      setPermission(Notification.permission);
+      setEnabled(localStorage.getItem(LS_KEY) === "1");
+      seeded.current = false; // reseed so we don't backfire on the first poll
+    };
+    window.addEventListener(EVENT, changed);
+    return () => window.removeEventListener(EVENT, changed);
   }, []);
 
   const fire = useCallback(async (job: Job) => {
@@ -96,55 +105,48 @@ export default function NotificationCenter() {
     return () => clearInterval(t);
   }, [enabled, permission, fire]);
 
-  if (!supported) return null;
+  return null;
+}
 
-  const enable = async () => {
-    let p = permission;
+/** The Alerts row in Settings: asks the browser for permission and turns the alerts on or off. */
+export function AlertsSwitch() {
+  const [supported, setSupported] = useState(false);
+  const [permission, setPermission] = useState<NotificationPermission>("default");
+  const [enabled, setEnabled] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined" || !("Notification" in window)) return;
+    setSupported(true);
+    setPermission(Notification.permission);
+    setEnabled(localStorage.getItem(LS_KEY) === "1");
+  }, []);
+
+  if (!supported) return <span className="text-[12px] text-muted">Not available in this browser</span>;
+  if (permission === "denied")
+    return <span className="text-[12px] text-muted text-right">Blocked in this browser’s site settings</span>;
+
+  const save = (on: boolean) => {
+    setEnabled(on);
+    localStorage.setItem(LS_KEY, on ? "1" : "0");
+    window.dispatchEvent(new CustomEvent(EVENT));
+  };
+  const choose = async (v: "on" | "off") => {
+    if (v === "off") return save(false);
+    let p: NotificationPermission = permission;
     if (p === "default") {
       p = await Notification.requestPermission();
       setPermission(p);
     }
-    if (p === "granted") {
-      setEnabled(true);
-      localStorage.setItem(LS_KEY, "1");
-      seeded.current = false; // reseed so we don't backfire on the first poll
-    }
+    if (p === "granted") save(true);
   };
-
-  const disable = () => {
-    setEnabled(false);
-    localStorage.setItem(LS_KEY, "0");
-  };
-
-  let label = "🔔 Enable alerts";
-  let onClick: (() => void) | undefined = enable;
-  let cls = "text-accent border-accent/30 hover:bg-accent/10";
-  if (permission === "denied") {
-    label = "🔕 Alerts blocked";
-    onClick = undefined;
-    cls = "text-muted border-border cursor-not-allowed opacity-60";
-  } else if (permission === "granted" && enabled) {
-    label = "🔔 Alerts on";
-    onClick = disable;
-    cls = "text-good border-good/30 hover:bg-good/10";
-  } else if (permission === "granted" && !enabled) {
-    label = "🔕 Alerts off";
-    onClick = enable;
-    cls = "text-muted border-border hover:bg-panel-2";
-  }
-
   return (
-    <button
-      onClick={onClick}
-      disabled={!onClick}
-      title={
-        permission === "denied"
-          ? "Notifications are blocked for this site in your browser settings"
-          : "Get notified when an agent finishes or needs you"
-      }
-      className={`w-full text-left text-[11px] px-2.5 py-1.5 rounded-lg border transition-colors ${cls}`}
-    >
-      {label}
-    </button>
+    <Choice
+      label="Alerts"
+      value={permission === "granted" && enabled ? "on" : "off"}
+      onChange={choose}
+      options={[
+        ["off", "Off"],
+        ["on", "On"],
+      ]}
+    />
   );
 }

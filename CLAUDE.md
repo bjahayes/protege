@@ -18,7 +18,7 @@ via the Claude Agent SDK.
   running. To try a change in a browser, build and run a separate copy:
   `PROTEGE_DIST_DIR=.next-test npx next build`, then in the background
   `PROTEGE_DIST_DIR=.next-test node scripts/serve.mjs next start -H 127.0.0.1 -p 4327` (previews on 4328); stop it
-  when done, delete `.next-test`, and put back `tsconfig.json` (the build adds `.next-test/types` to it). To make the running Protégé load your change, run `npm run restart`: it builds the new version while the old one keeps serving, waits until no session or task is mid-turn (yours finishes its reply first), then restarts on it. Sessions carry on from their saved history. The person can do the same with **Load latest version** in the sidebar.
+  when done, delete `.next-test`, and put back `tsconfig.json` (the build adds `.next-test/types` to it). To make the running Protégé load your change, run `npm run restart`: it builds the new version while the old one keeps serving, waits until no session or task is mid-turn (yours finishes its reply first), then restarts on it. Sessions carry on from their saved history. The person can do the same with **Load latest version** in Settings (foot of the sidebar).
 - Typecheck: `npx tsc --noEmit`
 - Tests (no model calls): `npm test` (arrow layout + Keep on a throwaway repo + the context panel's replay, plan and steps
   + `test:safety`: preview keys and files, noise filter, restore). Run Keep's with
@@ -138,7 +138,7 @@ via the Claude Agent SDK.
 - **2026-10-29:** Run titles go through `runTitle()` (agents.ts) and project-card lines skip sessions that
   `isProtegePrompt()` recognises, so Protégé's long instructions to Claude never show as a title.
 - **2026-10-29:** Explanations can be written in Simplified Technical English (ASD-STE100): `lib/explain-style.ts`
-  (`data/settings.json`, `GET/POST /api/settings`, the "Explanations" switch in both sidebars). Every prompt whose
+  (`data/settings.json`, `GET/POST /api/settings`, the Explanations row in Settings). Every prompt whose
   words the person reads appends `explainRules()` (`{ json: true }` for prompts that answer in JSON, or the
   model drops the format). Cached stories and plans are keyed by the style.
 - **2026-10-29:** This shell sets `NODE_ENV=production`, so a bare `npm install` drops the dev packages
@@ -188,7 +188,7 @@ via the Claude Agent SDK.
   A live job's `getEvents` merges saved rows older than the 3,000 kept in memory.
 - **2026-10-29:** Sign-in (`startLogin`) runs `claude auth login` hidden, shows its link and a code box, and falls back
   to a window if no link appears in 20 s or it fails.
-- **2026-10-29:** Two looks, Classic and Midnight (the "Look" switch in both sidebars; kept per browser in
+- **2026-10-29:** Two looks, Classic and Midnight (the Look row in Settings; kept per browser in
   `protege.theme`; `?theme=midnight|classic` sets it). Tailwind colours are `rgb(var(--c-NAME) / <alpha-value>)`
   set in `globals.css` (`:root` = Classic, `[data-theme="midnight"]` on `<html>`, applied by an inline script in
   `layout.tsx` before the page draws). Never hard-code a colour: use the Tailwind names or `var(--good)` etc.
@@ -196,3 +196,8 @@ via the Claude Agent SDK.
   screen's one main action `btn-main` (white pill in Midnight) and secondary tinted buttons `btn-alt`. Code that
   works out colours (Mermaid) reads the CSS variables and redraws on the `protege-theme` event.
   `SWEEP_THEME=midnight node scripts/ui-sweep.mjs` sweeps the layout in that look.
+- **2026-10-29:** Settings (`components/SettingsMenu.tsx`, the ⚙ button at the foot of both sidebars) holds Look,
+  Explanations, Demo mode, Alerts, Claude Code (who is signed in, version, Update) and, in the full view, Load
+  latest version. Put any new Protégé-wide choice there as a `Row`, not in the sidebar. The alert watcher
+  (`NotificationCenter`) stays mounted in `AppShell`; its switch (`AlertsSwitch`) tells it of changes with the
+  `protege-alerts` event. The sidebar shows only a restart's progress (`RestartButton statusOnly`).

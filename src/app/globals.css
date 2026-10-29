@@ -19,11 +19,14 @@
   --text-2: #cfd5df; --strong: #f2f4f7; --code-bg: #11151c; --scroll: #2b3340;
   --font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
+/* Midnight: blue-black surfaces rather than neutral grey, card edges in a cool slate rather than white
+   (white edges on every card made pages read as black-and-white line drawings), section labels and
+   quieter text tinted blue, and "in progress" in violet so it stands apart from the blue of links. */
 [data-theme="midnight"] {
-  --c-bg: 7 7 7; --c-panel: 13 14 18; --c-panel-2: 20 20 24; --c-border: 34 34 42; --c-muted: 162 164 169;
-  --c-text: 255 255 255; --c-accent: 0 173 228; --c-good: 111 210 154; --c-warn: 231 184 90; --c-bad: 242 131 127; --c-running: 0 173 228;
-  --text-2: #c8cad0; --strong: #ffffff; --code-bg: #0d0e12; --scroll: #2e3038;
-  --edge: #d9dae5; --accent-ink: #c4ecf9;
+  --c-bg: 6 8 13; --c-panel: 12 16 25; --c-panel-2: 19 25 38; --c-border: 33 41 58; --c-muted: 150 162 184;
+  --c-text: 255 255 255; --c-accent: 0 173 228; --c-good: 111 210 154; --c-warn: 231 184 90; --c-bad: 242 131 127; --c-running: 158 146 255;
+  --text-2: #c9d0dd; --strong: #ffffff; --code-bg: #0b1019; --scroll: #2c3548;
+  --edge: #3f5272; --accent-ink: #5fd0f3; --label: #8fb0d6;
   --font-ui: var(--font-geist), "Inter", system-ui, sans-serif;
   --font-display: var(--font-cal-sans), "Space Grotesk", system-ui, sans-serif;
 }
@@ -129,7 +132,7 @@ body {
 [data-theme="midnight"] main h1.text-lg { font-size: 24px; }
 @media (max-width: 767px) { [data-theme="midnight"] main h1.text-lg { font-size: 20px; } }
 /* section labels: small capitals, spaced */
-[data-theme="midnight"] main h2.text-sm, [data-theme="midnight"] main h3.text-sm { text-transform: uppercase; letter-spacing: 0.09em; font-size: 12px; font-weight: 500; color: #aeaeb7; }
+[data-theme="midnight"] main h2.text-sm, [data-theme="midnight"] main h3.text-sm { text-transform: uppercase; letter-spacing: 0.09em; font-size: 12px; font-weight: 500; color: var(--label); }
 /* cards: rounder, edged with a light hairline, no shadow */
 [data-theme="midnight"] .rounded-xl { border-radius: 16px; }
 [data-theme="midnight"] .rounded-2xl { border-radius: 20px; }

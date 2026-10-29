@@ -2,9 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { DemoToggle } from "./DemoBar";
-import ExplainStyleToggle from "./ExplainStyleToggle";
-import ThemeToggle from "./ThemeToggle";
 
 const ITEMS = [
   { href: "/simple", label: "My projects", icon: "▦" },
@@ -33,11 +30,6 @@ export default function SimpleSidebar() {
           </Link>
         );
       })}
-      <div className="mt-2 pt-2 border-t border-border flex flex-col gap-2">
-        <DemoToggle />
-        <ExplainStyleToggle />
-        <ThemeToggle />
-      </div>
     </nav>
   );
 }
