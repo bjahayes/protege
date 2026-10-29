@@ -184,7 +184,7 @@ body {
   --font-display: var(--font-newsreader), Georgia, serif;
 }
 [data-theme="paper"] body { font-size: 15px; }
-[data-theme="paper"] main h1 { font-family: var(--font-display); font-weight: 500; letter-spacing: -0.01em; }
+[data-theme="paper"] main h1 { font-family: var(--font-display); font-weight: 500; letter-spacing: -0.01em; line-height: 1.15; }
 [data-theme="paper"] main h1.text-2xl, [data-theme="paper"] main h1.text-xl { font-size: clamp(28px, 2.4vw, 36px); }
 [data-theme="paper"] main h2.text-sm, [data-theme="paper"] main h3.text-sm { text-transform: uppercase; letter-spacing: 0.12em; font-size: 12px; font-weight: 600; color: var(--label); }
 /* reading text in the serif */
@@ -211,3 +211,5 @@ body {
 [data-theme="paper"] :is(.rounded-xl, .rounded-2xl)[class*="bg-accent/"] { background: rgb(var(--c-panel-2)); border-color: rgb(var(--c-border)); }
 [data-theme="paper"] :is(.rounded-xl, .rounded-2xl)[class*="bg-accent/"]:hover { background: #ece8de; }
 [data-theme="paper"] :is(.rounded-xl, .rounded-2xl)[class*="from-accent/"] { background: rgb(var(--c-panel-2)); border-color: rgb(var(--c-border)); }
+/* the working timeline's "running steps" stretches: violet in the other looks, muted slate blue in Paper */
+[data-theme="paper"] .replay-running { background-color: rgb(var(--c-running) / 0.75); }

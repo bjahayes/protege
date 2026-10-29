@@ -5,6 +5,8 @@
 //   spill      text that runs out of its box (and isn't cut off with "…" on purpose)
 //   overlap    two buttons, links or fields drawn on top of each other
 //   tiny       text smaller than 11 px
+//   cramped    text whose line is shorter than its letters, so they spill over what sits above or below
+//              (a look that enlarges a heading without its line height did this to Paper's page titles)
 //   wires      arrows in the parts diagram crossing cards or each other (data-wire-faults)
 // Usage: node scripts/ui-sweep.mjs [baseUrl] [outDir]   (default http://127.0.0.1:4327, data/ui-sweep)
 // It only reads pages; it never presses anything that changes a project.
@@ -90,6 +92,10 @@ function measure() {
     if (hasText && cs.overflowX === "visible" && el.scrollWidth > el.clientWidth + 3 && el.clientWidth > 0 && cs.display !== "inline")
       say("spill", el, ` (${el.scrollWidth} in ${el.clientWidth}px)`);
     if (hasText && parseFloat(cs.fontSize) < 11 && el.innerText.trim()) say("tiny", el, ` ${cs.fontSize}`);
+    // A line clearly shorter than its letters lets them spill over what sits above or below (a line exactly as
+    // tall as a single emoji icon is fine).
+    if (hasText && cs.lineHeight !== "normal" && parseFloat(cs.lineHeight) < parseFloat(cs.fontSize) * 0.95 && el.innerText.trim())
+      say("cramped", el, ` ${cs.fontSize} type on ${cs.lineHeight} lines`);
   }
   // Controls on top of one another (a control scrolled out of sight inside its box doesn't count).
   const shown = (el) => {

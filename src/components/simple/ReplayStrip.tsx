@@ -1,6 +1,6 @@
 "use client";
 
-// A task's run as one bar: blue while it reads, green while it changes files, violet while it
+// A task's run as one bar: blue while it reads, green while it changes files, violet (slate blue in Paper) while it
 // runs steps, red for problems, each stretch as long as it took. Tapping a stretch shows what
 // happened in it. Stripes of violet and red mean it's going round in circles.
 
@@ -12,7 +12,8 @@ const FILL: Record<ReplayKind, string> = {
   reading: "bg-accent/55",
   changing: "bg-good/80",
   // Violet: apart from reading (blue), changing (green) and problems (red), and not a warning colour.
-  running: "bg-violet-400/75",
+  // Paper alone draws it in its muted slate blue (replay-running in globals.css).
+  running: "replay-running bg-violet-400/75",
   problem: "bg-bad",
 };
 
