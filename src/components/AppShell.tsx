@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import SidebarNav from "./SidebarNav";
 import SimpleSidebar from "./SimpleSidebar";
 import NotificationCenter from "./NotificationCenter";
@@ -10,14 +11,30 @@ import GuideHelper from "./GuideHelper";
 import SignInBanner from "./SignInBanner";
 import RestartButton from "./RestartButton";
 import { DemoNotice } from "./DemoBar";
+import ExplainStyleToggle from "./ExplainStyleToggle";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const simple = pathname.startsWith("/simple");
+  // Below tablet width the sidebar becomes a menu that slides in over the page.
+  const [menu, setMenu] = useState(false);
+  useEffect(() => setMenu(false), [pathname]);
+  useEffect(() => {
+    if (!menu) return;
+    const k = (e: KeyboardEvent) => e.key === "Escape" && setMenu(false);
+    window.addEventListener("keydown", k);
+    return () => window.removeEventListener("keydown", k);
+  }, [menu]);
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <aside className="w-56 shrink-0 border-r border-border bg-panel/60 flex flex-col overflow-y-auto">
+    <div className="flex h-[100dvh] overflow-hidden">
+      {menu && <div className="md:hidden fixed inset-0 z-40 bg-black/50" onClick={() => setMenu(false)} aria-hidden="true" />}
+      <aside
+        id="app-menu"
+        className={`w-56 shrink-0 border-r border-border bg-panel flex flex-col overflow-y-auto md:static md:translate-x-0 md:bg-panel/60 fixed inset-y-0 left-0 z-50 transition-transform ${
+          menu ? "translate-x-0 shadow-2xl" : "-translate-x-full"
+        }`}
+      >
         <Link href={simple ? "/simple" : "/"} className="px-5 py-4 border-b border-border block">
           <div className="text-lg font-bold tracking-tight">Protégé</div>
           <div className="text-[11px] text-muted -mt-0.5">{simple ? "Build things, simply" : "Claude Code mission control"}</div>
@@ -36,6 +53,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           )}
           {!simple && (
             <div className="p-3 flex flex-col gap-2">
+              <ExplainStyleToggle />
               <NotificationCenter />
               <RestartButton />
             </div>
@@ -61,10 +79,24 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       <main className="flex-1 min-w-0 flex flex-col">
+        <div className="md:hidden flex items-center gap-3 px-4 h-12 border-b border-border bg-panel/60 shrink-0">
+          <button
+            onClick={() => setMenu(true)}
+            aria-label="Open the menu"
+            aria-expanded={menu}
+            aria-controls="app-menu"
+            className="w-9 h-9 -ml-2 rounded-lg text-lg text-muted hover:text-text hover:bg-panel-2"
+          >
+            ☰
+          </button>
+          <Link href={simple ? "/simple" : "/"} className="font-bold tracking-tight">
+            Protégé
+          </Link>
+        </div>
         <SignInBanner />
         {!simple && <DemoNotice />}
         {/* Pages scroll here, so the sign-in banner never pushes a full-height page off screen. */}
-        <div id="main-scroll" className="flex-1 min-h-0 overflow-y-auto" style={{ scrollbarGutter: "stable" }}>
+        <div id="main-scroll" className={`flex-1 min-h-0 overflow-y-auto ${simple ? "pb-16" : ""}`} style={{ scrollbarGutter: "stable" }}>
           {children}
         </div>
       </main>

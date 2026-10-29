@@ -133,11 +133,11 @@ function NoteRow({ note }: { note: BrainNote }) {
         <div className="min-w-0">
           <div className="text-sm">
             {note.title}
-            {note.hubOf && <span className="text-[10px] text-running ml-2">hub</span>}
+            {note.hubOf && <span className="text-[11px] text-running ml-2">hub</span>}
           </div>
           {note.summary && <div className="text-[11px] text-muted mt-0.5 leading-snug">{note.summary}</div>}
           {note.projects && note.projects.length > 1 && (
-            <div className="text-[10px] text-muted/70 mt-1">also in: {note.projects.filter((p) => p).join(", ")}</div>
+            <div className="text-[11px] text-muted/70 mt-1">also in: {note.projects.filter((p) => p).join(", ")}</div>
           )}
         </div>
       </button>

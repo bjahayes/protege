@@ -167,13 +167,13 @@ export default function CommandBar() {
                     i === sel ? "bg-panel-2" : ""
                   }`}
                 >
-                  <span className="text-[10px] uppercase tracking-wide text-muted/60 w-16 shrink-0">{c.group}</span>
+                  <span className="text-[11px] uppercase tracking-wide text-muted/60 w-16 shrink-0">{c.group}</span>
                   <span className="text-sm truncate">{c.label}</span>
                   {c.hint && <span className="text-[11px] text-muted truncate ml-auto font-mono">{c.hint}</span>}
                 </button>
               ))}
             </div>
-            <div className="px-4 py-1.5 border-t border-border text-[10px] text-muted flex gap-3">
+            <div className="px-4 py-1.5 border-t border-border text-[11px] text-muted flex gap-3">
               <span>↑↓ navigate</span>
               <span>↵ open</span>
               <span>esc close</span>

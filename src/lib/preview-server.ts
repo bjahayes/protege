@@ -40,12 +40,28 @@ export function startPreviewServer(): void {
       if (host !== "127.0.0.1" && host !== "localhost") return send(403, "Previews only open on this computer.");
       if (req.method !== "GET" && req.method !== "HEAD") return send(405, "Previews are read-only.");
       const url = new URL(req.url || "/", "http://127.0.0.1");
-      const [id, ...parts] = url.pathname.split("/").filter(Boolean).map(decodeURIComponent);
-      const dir = await projectDir(id);
-      if (!dir || !fs.existsSync(dir)) return send(404, "Unknown project.");
+      const segs = url.pathname.split("/").filter(Boolean).map(decodeURIComponent);
+      // /_job/<job id>/… is a task's safe copy, while it's waiting for Keep or Throw away, so the
+      // change can be seen working beside the project as it was.
+      let dir: string | null;
+      let base: string;
+      let parts: string[];
+      if (segs[0] === "_job") {
+        const { getJobManager } = await import("./job-manager");
+        const job = getJobManager().get(segs[1] || "");
+        dir = job?.worktreeState === "active" && job.worktreePath ? job.worktreePath : null;
+        base = `/_job/${encodeURIComponent(segs[1] || "")}/`;
+        parts = segs.slice(2);
+        if (!dir || !fs.existsSync(dir)) return send(404, "This change has been kept or thrown away, so its copy is gone.");
+      } else {
+        dir = await projectDir(segs[0]);
+        base = `/${encodeURIComponent(segs[0] || "")}/`;
+        parts = segs.slice(1);
+        if (!dir || !fs.existsSync(dir)) return send(404, "Unknown project.");
+      }
       const file = resolvePreviewFile(dir, parts);
       if (!file) return send(404, "Nothing to preview here yet.");
-      if (isHtml(file)) return send(200, injectBase(fs.readFileSync(file, "utf8"), `/${encodeURIComponent(id)}/`), contentTypeFor(file));
+      if (isHtml(file)) return send(200, injectBase(fs.readFileSync(file, "utf8"), base), contentTypeFor(file));
       return send(200, fs.readFileSync(file), contentTypeFor(file));
     } catch {
       return send(500, "Couldn't read that file.");

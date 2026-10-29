@@ -13,6 +13,8 @@ import MarkdownView from "../MarkdownView";
 import { Picture, ToolInput, ToolOutput } from "./ToolDetail";
 import { collectChanges, diffCounts, lineDiff, type FileChange } from "@/lib/chat-changes";
 import { ChangesCard, ChangesPanel } from "./Changes";
+import ChatPanel from "./ChatPanel";
+import type { ComponentInfo } from "@/lib/assessment";
 
 type Status = "starting" | "working" | "waiting" | "idle" | "ended";
 interface LiveState {
@@ -633,7 +635,7 @@ function Composer({
             placeholder={busy ? "Add to the session — Claude reads it next" : hasSession ? "Reply to Claude…" : "What should Claude do?"}
             className="w-full bg-transparent px-4 pt-3 pb-1 text-sm resize-none focus:outline-none"
           />
-          <div className="flex items-center gap-2 px-3 pb-2">
+          <div className="flex flex-wrap items-center gap-2 px-3 pb-2">
             <input
               ref={picker}
               type="file"
@@ -922,10 +924,17 @@ export default function ChatView({
   }, []);
   const isLive = () => !!liveRef.current && liveRef.current.status !== "ended";
 
+  // A part picked on the panel's map: the next message is about it.
+  const [about, setAbout] = useState<ComponentInfo | null>(null);
+  const aboutRef = useRef<ComponentInfo | null>(null);
+  aboutRef.current = about;
+
   const send = useCallback(
-    async (text: string, files: Pending[]): Promise<string | null> => {
+    async (typed: string, files: Pending[]): Promise<string | null> => {
       stick.current = true;
       const { mode, model, effort } = prefsRef.current;
+      const part = aboutRef.current;
+      const text = part && typed.trim() ? `About the part of the project called “${part.name}” (${part.path}): ${typed}` : typed;
       try {
         const r = await apiFetch("/api/chat", {
           method: "POST",
@@ -942,6 +951,7 @@ export default function ChatView({
         });
         const d = await r.json();
         if (!r.ok || !d.sessionId) return d.error || "Couldn't send the message.";
+        if (part) setAbout(null);
         if (!es.current) connect(d.sessionId);
         if (!sidRef.current) {
           created.current = d.sessionId;
@@ -994,15 +1004,29 @@ export default function ChatView({
   const closeChanges = useCallback(() => setOpenFile(null), []);
   useEffect(() => setOpenFile(null), [sessionId]);
 
+  // The context panel beside the chat: shown unless the person closed it (remembered), and on
+  // narrower windows only when asked for. The changes panel, when open, takes its place.
+  const [panel, setPanel] = useState(false);
+  useEffect(() => {
+    const saved = pref("protege.chat.panel", "");
+    setPanel(saved ? saved === "1" : window.innerWidth >= 1280);
+  }, []);
+  const showPanel = useCallback((v: boolean) => {
+    setPanel(v);
+    savePref("protege.chat.panel", v ? "1" : "0");
+  }, []);
+  const closePanel = useCallback(() => showPanel(false), [showPanel]);
+  const pickPart = useCallback((p: ComponentInfo) => setAbout(p), []);
+
   return (
     <div className="flex h-full min-h-0">
     <div className="flex flex-col flex-1 min-w-0 min-h-0">
-      <header className="px-6 py-3 border-b border-border flex items-center gap-3 min-w-0">
+      <header className="px-6 py-3 border-b border-border flex flex-wrap items-center gap-x-3 gap-y-2 min-w-0">
         <div className="min-w-0">
           <div className="text-sm font-semibold truncate">{title || (sessionId ? "Session" : "New session")}</div>
           <div className="text-[11.5px] text-muted truncate font-mono">{cwd || projectName}</div>
         </div>
-        <div className="ml-auto flex items-center gap-2 shrink-0 text-[11.5px] text-muted">
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-2 text-[11.5px] text-muted">
           {changes.length > 0 && (
             <button
               onClick={() => setOpenFile((f) => (f === null ? "" : null))}
@@ -1016,6 +1040,19 @@ export default function ChatView({
               <span className="font-mono text-bad">−{changes.reduce((n, f) => n + f.removed, 0)}</span>
             </button>
           )}
+          <button
+            onClick={() => {
+              setOpenFile(null);
+              showPanel(!(panel && openFile === null));
+            }}
+            aria-pressed={panel && openFile === null}
+            className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border text-[12px] ${
+              panel && openFile === null ? "border-accent/50 text-accent bg-accent/10" : "border-border hover:text-text"
+            }`}
+            title="The plan, the work as it happens, and what changed, beside the chat"
+          >
+            What&apos;s happening
+          </button>
           {(live?.activeModel || live?.model) && <span className="font-mono">{live.activeModel || live.model}</span>}
           {busy && (
             <span className="inline-flex items-center gap-1.5 text-accent">
@@ -1062,7 +1099,16 @@ export default function ChatView({
         busy={busy}
         hasSession={!!sessionId}
         notice={
-          elsewhere ? (
+          <>
+          {about && (
+            <div className="mb-2 inline-flex items-center gap-1.5 text-[12px] px-2.5 py-1 rounded-full border border-accent/40 bg-accent/10 text-accent">
+              About: {about.name}
+              <button onClick={() => setAbout(null)} aria-label="Not about this part" className="hover:text-text">
+                ✕
+              </button>
+            </div>
+          )}
+          {elsewhere ? (
             <div className="text-[12px] text-warn mb-2">
               This session is open in {elsewhere}. If you reply here, Protégé carries it on as a copy, so the session in{" "}
               {elsewhere} keeps its whole history and so does this one.
@@ -1071,7 +1117,9 @@ export default function ChatView({
             <div className="text-[12px] text-muted mb-2">
               This is a copy of a session that was open in {live.continuedBecause || "another app"}. Protégé carried it on here so
               neither one loses messages; the original is unchanged.
-            </div>          ) : null
+            </div>
+          ) : null}
+          </>
         }
         onSend={send}
         onStop={stop}
@@ -1084,7 +1132,19 @@ export default function ChatView({
         models={models}
       />
     </div>
-    {openFile !== null && <ChangesPanel files={changes} open={openFile} onOpen={openChanges} onClose={closeChanges} />}
+    {openFile !== null ? (
+      <ChangesPanel files={changes} open={openFile} onOpen={openChanges} onClose={closeChanges} />
+    ) : panel ? (
+      <ChatPanel
+        items={items}
+        projectId={projectId}
+        cwd={cwd}
+        status={live?.status || null}
+        planMode={(live?.permissionMode || mode) === "plan"}
+        onClose={closePanel}
+        onPick={pickPart}
+      />
+    ) : null}
     </div>
   );
 }

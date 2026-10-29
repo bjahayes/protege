@@ -20,7 +20,7 @@ via the Claude Agent SDK.
   `PROTEGE_DIST_DIR=.next-test node scripts/serve.mjs next start -H 127.0.0.1 -p 4327` (previews on 4328); stop it
   when done, delete `.next-test`, and put back `tsconfig.json` (the build adds `.next-test/types` to it). To make the running Protégé load your change, run `npm run restart`: it builds the new version while the old one keeps serving, waits until no session or task is mid-turn (yours finishes its reply first), then restarts on it. Sessions carry on from their saved history. The person can do the same with **Load latest version** in the sidebar.
 - Typecheck: `npx tsc --noEmit`
-- Tests (no model calls): `npm test` (arrow layout + Keep on a throwaway repo)
+- Tests (no model calls): `npm test` (arrow layout + Keep on a throwaway repo + the context panel's replay, plan and steps)
 - Build: `npm run build`
 
 ## Stack
@@ -67,7 +67,7 @@ via the Claude Agent SDK.
     (template, description, the shaping run, when first tried). `starterProgress()` (client-safe) works out the
     five getting-started steps from it and the project's jobs; `GettingStarted.tsx` shows them on the project page.
 - `src/components/simple/**` — Protégé's live views: `SimpleTask` (conversation + track + review + reply),
-  `Conversation`, `BuildTrack`, `PartsMap`, `LiveStrip`, `PartsBar`.
+  `Conversation`, `ContextPanel`, `ReplayStrip`, `PartsMap`, `LiveStrip`, `PartsBar`.
 - `src/app/api/**` — route handlers (all `runtime = "nodejs"`, `dynamic = "force-dynamic"`).
 - `src/app/**` — client pages; `src/components/**` — client components.
 
@@ -107,3 +107,63 @@ via the Claude Agent SDK.
 - **2026-10-28:** Parts diagram arrows are routed by `wire-route.ts` (right-angled, only through gaps, one
   lane each; gaps grow to fit). `checkWires()` counts arrows crossing cards or each other and labels hiding
   arrows; the diagram writes the count to `data-wire-faults`. Keep it at 0 on every project and width.
+- **2026-10-29:** The Simple task view is a conversation plus a context panel (`ContextPanel`): plan on the map,
+  replay strip, what changed in numbered steps, Before / After. Server pieces: `lib/change-story.ts` (Haiku,
+  `MAX_THINKING_TOKENS=0`: with thinking on the same grouping took ~30 s, not ~5), `GET /api/jobs/:id/story`
+  (`?quick=1` = grouping only), preview server `/_job/<id>/` (a safe copy waiting for Keep), `kind: "plan"`
+  runs (`planFirst` on POST /api/jobs). Pure parts in `lib/replay.ts`, `lib/plan.ts`, `lib/story-steps.ts`,
+  tested by `npm run test:panel`.
+- **2026-10-29:** Git work on one safe copy is serialised (`onePerCopy` in `git.ts`). Concurrent `git add`
+  from a diff read and the end-of-run commit hit the index lock: the commit silently failed (Keep would merge
+  without the change). `test:keep` checks it.
+- **2026-10-29:** The `result` event's text is whitespace-squashed (`summarize`); never compare it to a `text`
+  event directly or show it as-is when the reply already showed.
+- **2026-10-29:** The Code page has the same context panel (`components/chat/ChatPanel.tsx` →
+  `ContextPanel` with `who="Claude"`, `flush`). `ChatItem`s carry `ts` (saved transcript `timestamp`, or
+  stamped in `chat-manager.emitItems`). Chat stories come from Claude's edits (`storyFiles` in
+  `lib/chat-panel.ts`) via `POST /api/chat/story`; Plan-mode plans via `POST /api/chat/plan-parts`.
+- **2026-10-29:** Simple task updates are batched with `requestAnimationFrame`, which doesn't fire in a hidden
+  tab or browser pane: a test that reads the page while it's hidden sees "Getting started" until it's shown.
+- **2026-10-29:** Layout is checked by measurement, not by eye: with a test copy running on 4327,
+  `node scripts/ui-sweep.mjs` opens every page at 1440, 1024 and 390 px wide, screenshots each into
+  `data/ui-sweep/`, and counts sideways scrolling, text spilling out of its box, controls drawn over each other,
+  text under 11 px and parts-diagram arrow faults (it also opens each page's "What's happening" side).
+  `node scripts/test-resize.mjs <base> <session id>` drags the side-panel edges. Only the floating Help button
+  should show up (it floats over scrolling content on purpose). Run both after any layout change.
+- **2026-10-29:** Side panels resize through `components/Resizer.tsx` (`usePanelWidth` + `ResizeHandle`: drag,
+  double-click to reset, arrow keys, width remembered per panel). Below 768 px the sidebar is a ☰ menu and
+  the Code page's list and panels open full-width over the chat. Never use text below 11 px.
+- **2026-10-29:** Run titles go through `runTitle()` (agents.ts) and project-card lines skip sessions that
+  `isProtegePrompt()` recognises, so Protégé's long instructions to Claude never show as a title.
+- **2026-10-29:** Explanations can be written in Simplified Technical English (ASD-STE100): `lib/explain-style.ts`
+  (`data/settings.json`, `GET/POST /api/settings`, the "Explanations" switch in both sidebars). Every prompt whose
+  words the person reads appends `explainRules()` (`{ json: true }` for prompts that answer in JSON, or the
+  model drops the format). Cached stories and plans are keyed by the style.
+- **2026-10-29:** This shell sets `NODE_ENV=production`, so a bare `npm install` drops the dev packages
+  (TypeScript, Tailwind). Use `npm install --include=dev`.
+- **2026-10-29:** `npm run restart` waits for every session mid-turn, including the one that ran it: never poll
+  for the swap from inside a Protégé session (it waits for you while you wait for it). Run it as the last
+  step and end the turn, or use `npm run restart -- --force` / **Restart now**, which stops what's mid-turn.
+- **2026-10-29:** Code-page turns (`turnStarts` in `lib/chat-panel.ts`): a new turn starts at a message after a
+  `result` or after Claude's reply text; a message sent while Claude works is marked `midTurn` by
+  `chat-manager.send` and joins the turn. Saved transcripts have no `result` items. The panel's turn picker
+  shows any earlier turn's own picture.
+- **2026-10-29:** Project Overview has sub-tabs (Documents, Architecture, Flowchart, Agent runs), remembered in
+  `protege.overview.tab`.
+- **2026-10-29:** Turn summaries ("Built the replay strip") come from `lib/turn-summaries.ts` (Haiku, 25 turns a
+  call, `data/turn-summaries.json` keyed `v3:<style>:<turn key>`; bump the version to rewrite them all).
+  `lib/turn-digest.ts` (client-safe) describes a turn; `POST /api/turn-summaries` writes missing ones. The
+  project's **History** tab (`components/TurnHistory.tsx`, `GET /api/projects/:id/turns`) lists every turn of every
+  saved session in the folder, newest first; a session carried on as a copy repeats its early turns, so turns are
+  de-duplicated by key and start time. `?tab=history` opens it.
+- **2026-10-29:** Inbox items older than a week are marked `older` (folded away, not in the badge); reviews whose
+  safe copy is gone are dropped; Code-page sessions waiting for approval are listed (`chat:<id>`).
+- **2026-10-29:** The "What's happening" panel shows a live to-do list (`components/simple/TodoList.tsx`): Claude
+  Code's own (TaskCreate/TaskUpdate or TodoWrite, read by `lib/todo-list.ts`; job events carry them in `detail`),
+  reworded plainly by `lib/todo-plain.ts`; or, when Claude keeps none (headless runs usually don't, even when asked),
+  the request split into steps and ticked off by `lib/request-steps.ts` from what Claude adds and says, at most
+  every 10 s (`useRequestTodos`; never cancel a check in flight, or busy work starves it). Edit events carry
+  `detail.preview`, the lines an edit really adds.
+- **2026-10-29:** Job runs append Protégé's briefing to Claude Code's system prompt
+  (`{ type: "preset", preset: "claude_code", append }`). A plain string `systemPrompt` replaces Claude Code's own
+  instructions entirely; it did for every task and agent run until this date.

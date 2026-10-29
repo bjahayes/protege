@@ -7,7 +7,7 @@ export type JobStatus =
   | "stopped"
   | "interrupted";
 
-export type JobKind = "run" | "assess";
+export type JobKind = "run" | "assess" | "plan";
 
 export type WorktreeState = "none" | "active" | "applied" | "discarded" | "reverted";
 

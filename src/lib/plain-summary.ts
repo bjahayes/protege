@@ -1,6 +1,7 @@
 import path from "path";
 import { readFileSafe } from "./docs";
 import { metaPath, metaRel } from "./meta";
+import { explainRules } from "./explain-style";
 
 export function plainSummaryPath(dir: string): string {
   return metaPath(dir, "plain-summary.md");
@@ -40,6 +41,7 @@ export function buildPlainSummaryPrompt(dir?: string): string {
     `- Absolutely NO technical jargon. Do not use words like: API, framework, library, database, repository, SDK, function, class, deployment, backend, frontend, commit, endpoint, schema, runtime, or any programming/tool names.\n` +
     `- If a technical thing matters, describe what it DOES for the person in everyday language instead of naming it.\n` +
     `- Keep it concise (under ~250 words), warm, and confident. No hedging, no "as an AI".\n\n` +
+    explainRules() +
     `Write ONLY the file ${summary}. When done, reply with a one-line confirmation.`
   );
 }

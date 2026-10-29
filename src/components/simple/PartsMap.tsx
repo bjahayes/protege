@@ -4,6 +4,9 @@
 // boxes in three rows, with labelled arrows taken from the assessment's diagram. Parts whose
 // files are being changed by a running task glow, and so do the arrows that touch them.
 // Each part carries its label (Working, Partly built…) and the evidence for that label.
+// The context panel beside a task also marks parts (what a plan will change, what a change
+// did, step by step), adds the new parts a plan would make as dashed outlines, and lets the
+// person pick a part to talk about.
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -25,13 +28,59 @@ const TONE_PILL: Record<string, string> = {
   muted: "text-muted border-border",
 };
 
-export default function PartsMap({ assessment, changing }: { assessment: Assessment; changing?: Set<string> }) {
-  const comps = assessment.components || [];
+/** A mark the context panel puts on a part, shown in place of its status line. */
+export interface PartMark {
+  /** plan: a plan will change it; changed: the change touched it; step: it's step n of the change. */
+  tone: "plan" | "changed" | "step";
+  label: string;
+  n?: number;
+}
+
+const MARK_CARD: Record<PartMark["tone"], string> = {
+  plan: "border-warn bg-warn/5",
+  changed: "border-good bg-good/5",
+  step: "border-accent bg-accent/5",
+};
+const MARK_TEXT: Record<PartMark["tone"], string> = { plan: "text-warn", changed: "text-good", step: "text-accent" };
+const MARK_DOT: Record<PartMark["tone"], string> = { plan: "bg-warn", changed: "bg-good", step: "bg-accent" };
+
+export default function PartsMap({
+  assessment,
+  changing,
+  marks,
+  ghosts,
+  onPick,
+  pickLabel = "Talk about this part",
+  compact,
+}: {
+  assessment: Assessment;
+  changing?: Set<string>;
+  marks?: Map<string, PartMark>;
+  /** New parts a plan would add: drawn as dashed outlines. */
+  ghosts?: { name: string; what: string }[];
+  /** Offered in a part's details: pick the part to talk about it. */
+  onPick?: (part: ComponentInfo) => void;
+  pickLabel?: string;
+  /** Leave out the caption and key (the context panel has its own). */
+  compact?: boolean;
+}) {
+  const ghostKey = (ghosts || []).map((g) => g.name).join("|");
+  const comps = useMemo<(ComponentInfo & { ghost?: boolean })[]>(
+    () => [
+      ...(assessment.components || []),
+      ...(ghosts || [])
+        .filter((g) => !(assessment.components || []).some((c) => c.name.toLowerCase() === g.name.toLowerCase()))
+        .map((g) => ({ name: g.name, path: "", what: g.what, does: g.what, status: "unknown" as const, issues: [], ghost: true })),
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [assessment.generatedAt, assessment.components?.length, ghostKey]
+  );
   const edges = useMemo(
     () => edgesFromMermaid(assessment.architecture?.mermaid || "", comps),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [assessment.generatedAt, comps.length]
   );
+  const marksKey = [...(marks || [])].map(([k, m]) => `${k}:${m.tone}:${m.n || ""}`).join("|");
   const [sel, setSel] = useState<string | null>(null);
   const box = useRef<HTMLDivElement>(null);
   const nodes = useRef(new Map<string, HTMLButtonElement>());
@@ -107,7 +156,7 @@ export default function PartsMap({ assessment, changing }: { assessment: Assessm
     for (const n of nodes.current.values()) ro.observe(n);
     return () => ro.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [edges, changingKey, comps.length, sel, JSON.stringify(space)]);
+  }, [edges, changingKey, marksKey, comps.length, sel, JSON.stringify(space)]);
 
   if (!comps.length) return null;
   const selected = comps.find((c) => c.name === sel) || null;
@@ -149,14 +198,15 @@ export default function PartsMap({ assessment, changing }: { assessment: Assessm
           const sp = space.bands[bi] || { gap: bi ? 64 : 0, head: 30, row: 48 };
           return (
             <div key={label} data-band className="relative z-[1]" style={{ marginTop: sp.gap }}>
-              <div className="text-[10.5px] uppercase tracking-[0.08em] text-muted font-semibold" style={{ marginBottom: sp.head }}>
+              <div className="text-[11px] uppercase tracking-[0.08em] text-muted font-semibold" style={{ marginBottom: sp.head }}>
                 <span data-heading>{label}</span>
               </div>
               <div className="flex flex-wrap" style={{ columnGap: 40 + space.spread * 16, rowGap: sp.row }}>
                 {ns.map((c) => {
                   const st = PART_STATUS[c.status] || PART_STATUS.unknown;
                   const ch = isChanging(c.name);
-                  const why = partReason(c);
+                  const mark = marks?.get(c.name);
+                  const why = c.ghost ? null : partReason(c);
                   return (
                     <button
                       key={c.name}
@@ -167,17 +217,28 @@ export default function PartsMap({ assessment, changing }: { assessment: Assessm
                       data-part-card
                       onClick={() => setSel((s) => (s === c.name ? null : c.name))}
                       aria-pressed={sel === c.name}
-                      className={`flex-1 basis-[150px] max-w-[230px] min-w-0 text-left rounded-xl border-[1.5px] px-3 py-2.5 flex flex-col gap-1 transition-colors hover:border-accent/50 ${
-                        ch ? "border-accent bg-panel protege-glow" : `${TONE_BORDER[st.tone]} ${st.dashed ? "border-dashed bg-transparent" : "bg-panel"}`
+                      className={`relative flex-1 basis-[150px] max-w-[230px] min-w-0 text-left rounded-xl border-[1.5px] px-3 py-2.5 flex flex-col gap-1 transition-colors hover:border-accent/50 ${
+                        ch
+                          ? "border-accent bg-panel protege-glow"
+                          : c.ghost
+                            ? "border-dashed border-warn bg-transparent"
+                            : mark
+                              ? MARK_CARD[mark.tone]
+                              : `${TONE_BORDER[st.tone]} ${st.dashed ? "border-dashed bg-transparent" : "bg-panel"}`
                       } ${sel === c.name ? "ring-2 ring-text/70 ring-offset-2 ring-offset-bg" : ""}`}
                     >
+                      {mark?.n != null && !ch && (
+                        <span className="absolute -top-2.5 -left-2.5 w-5 h-5 rounded-full bg-accent text-bg text-[11px] font-bold flex items-center justify-center">
+                          {mark.n}
+                        </span>
+                      )}
                       <span className="font-semibold text-[13.5px] leading-snug">{c.name}</span>
                       <span className="text-[12px] text-muted leading-snug line-clamp-2">{c.what}</span>
-                      <span className="flex items-center gap-1.5 text-[11px] text-muted mt-0.5">
-                        <span className={`w-2 h-2 rounded-full ${ch ? "bg-accent" : TONE_DOT[st.tone]}`} />
-                        {ch ? "Being changed now" : st.label}
+                      <span className={`flex items-center gap-1.5 text-[11px] mt-0.5 ${ch ? "text-muted" : c.ghost ? "text-warn" : mark ? MARK_TEXT[mark.tone] : "text-muted"}`}>
+                        <span className={`w-2 h-2 rounded-full ${ch ? "bg-accent" : c.ghost ? "bg-warn" : mark ? MARK_DOT[mark.tone] : TONE_DOT[st.tone]}`} />
+                        {ch ? "Being changed now" : c.ghost ? "New part" : mark ? mark.label : st.label}
                       </span>
-                      {why && !ch && (
+                      {why && !ch && !mark && !compact && (
                         <span className="text-[11.5px] text-muted/90 leading-snug line-clamp-3">
                           <span className="text-text/70">{why.lead}: </span>
                           {why.text}
@@ -192,6 +253,8 @@ export default function PartsMap({ assessment, changing }: { assessment: Assessm
         })}
       </div>
 
+      {!compact && (
+      <>
       <figcaption className="text-[12.5px] text-muted leading-relaxed mt-4 max-w-prose">
         How the parts of this project connect, and how far along each one is. Protégé worked this out by reading the code
         {when ? ` on ${when}` : ""}; it didn&apos;t run anything. Arrows are labelled with what passes along them. Tap a part for
@@ -218,6 +281,8 @@ export default function PartsMap({ assessment, changing }: { assessment: Assessm
           <dd className="m-0 text-muted">a task running now is editing its files</dd>
         </div>
       </dl>
+      </>
+      )}
 
       {selected && nodes.current.get(selected.name) && (
         <PartDetail
@@ -225,6 +290,15 @@ export default function PartsMap({ assessment, changing }: { assessment: Assessm
           card={nodes.current.get(selected.name)!}
           changing={isChanging(selected.name)}
           onClose={() => setSel(null)}
+          onPick={
+            onPick && !selected.ghost
+              ? () => {
+                  onPick(selected);
+                  setSel(null);
+                }
+              : undefined
+          }
+          pickLabel={pickLabel}
         />
       )}
     </figure>
@@ -240,11 +314,15 @@ function PartDetail({
   card,
   changing,
   onClose,
+  onPick,
+  pickLabel,
 }: {
-  part: ComponentInfo;
+  part: ComponentInfo & { ghost?: boolean };
   card: HTMLElement;
   changing: boolean;
   onClose: () => void;
+  onPick?: () => void;
+  pickLabel?: string;
 }) {
   const panel = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ left: number; top: number; width: number } | "sheet" | null>(null);
@@ -326,13 +404,18 @@ function PartDetail({
     >
       <div className="flex items-center gap-2 flex-wrap">
         <span className="font-semibold">{part.name}</span>
-        <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${changing ? "text-accent border-accent/50 bg-accent/10" : TONE_PILL[st.tone]}`}>
-          {changing ? "Being changed now" : st.label}
+        <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${changing ? "text-accent border-accent/50 bg-accent/10" : part.ghost ? "text-warn border-warn/40 bg-warn/10" : TONE_PILL[st.tone]}`}>
+          {changing ? "Being changed now" : part.ghost ? "New part in the plan" : st.label}
         </span>
         <button onClick={onClose} aria-label="Close" className="ml-auto text-muted hover:text-text text-sm leading-none px-1">
           ✕
         </button>
       </div>
+      {part.ghost ? (
+        <p className="text-[13px] leading-relaxed mt-2.5">
+          {part.what} It doesn&apos;t exist yet: the plan would add it.
+        </p>
+      ) : (
       <dl className="grid grid-cols-1 sm:grid-cols-[110px_minmax(0,1fr)] gap-x-4 gap-y-1.5 mt-2.5 text-[13px] leading-relaxed">
         <dt className="text-muted">What it is</dt>
         <dd className="m-0">{part.what}</dd>
@@ -364,6 +447,15 @@ function PartDetail({
         <dt className="text-muted">Where it is</dt>
         <dd className="m-0 font-mono text-[12px] break-all">{part.path}</dd>
       </dl>
+      )}
+      {onPick && (
+        <button
+          onClick={onPick}
+          className="mt-3 text-[12.5px] px-3 py-1.5 rounded-lg border border-accent/40 bg-accent/10 text-accent hover:bg-accent/20 font-medium"
+        >
+          {pickLabel}
+        </button>
+      )}
     </div>,
     document.body
   );

@@ -40,7 +40,7 @@ export default function RepoMapView({ projectId }: { projectId: string }) {
         <h3 className="text-sm font-semibold text-muted">Code map</h3>
         <div className="flex items-center gap-1.5">
           {map.languages.slice(0, 5).map((l) => (
-            <span key={l.language} className="text-[10px] px-1.5 py-0.5 rounded border border-border text-muted">
+            <span key={l.language} className="text-[11px] px-1.5 py-0.5 rounded border border-border text-muted">
               {l.language} {l.files}
             </span>
           ))}
@@ -71,7 +71,7 @@ function FileRow({ f, maxRank }: { f: RepoFile; maxRank: number }) {
           </div>
         </div>
         <span className="font-mono text-xs truncate flex-1">{f.path}</span>
-        <span className="text-[10px] text-muted shrink-0" title="imported by / imports">
+        <span className="text-[11px] text-muted shrink-0" title="imported by / imports">
           ↓{f.importedBy} ↑{f.imports} · {f.loc} loc
         </span>
         {f.symbols.length > 0 && <span className="text-muted text-xs shrink-0">{open ? "▾" : "▸"}</span>}
@@ -81,7 +81,7 @@ function FileRow({ f, maxRank }: { f: RepoFile; maxRank: number }) {
           {f.symbols.map((s, i) => (
             <span
               key={i}
-              className="text-[10px] px-1.5 py-0.5 rounded font-mono border"
+              className="text-[11px] px-1.5 py-0.5 rounded font-mono border"
               style={{ borderColor: (KIND_COLOR[s.kind] || "#8b95a5") + "55", color: KIND_COLOR[s.kind] || "#8b95a5" }}
               title={`${s.kind} · line ${s.line}`}
             >

@@ -120,21 +120,21 @@ function ProjectCard({ p }: { p: ProjectSummary }) {
           <div className="flex items-center gap-2">
             <h3 className="font-semibold truncate group-hover:text-accent">{p.name}</h3>
             {p.liveAgents > 0 ? (
-              <span className="live-dot inline-flex items-center gap-1 text-[10px] text-running font-medium shrink-0">
+              <span className="live-dot inline-flex items-center gap-1 text-[11px] text-running font-medium shrink-0">
                 <span className="w-1.5 h-1.5 rounded-full bg-running" />
                 {p.liveAgents} live
               </span>
             ) : (
               p.lastActivity != null &&
               Date.now() - p.lastActivity < 3 * 60 * 1000 && (
-                <span className="live-dot inline-flex items-center gap-1 text-[10px] text-good font-medium shrink-0">
+                <span className="live-dot inline-flex items-center gap-1 text-[11px] text-good font-medium shrink-0">
                   <span className="w-1.5 h-1.5 rounded-full bg-good" />
                   active
                 </span>
               )
             )}
             {!p.exists && (
-              <span className="text-[10px] text-bad border border-bad/30 rounded px-1.5 py-0.5 shrink-0">missing</span>
+              <span className="text-[11px] text-bad border border-bad/30 rounded px-1.5 py-0.5 shrink-0">missing</span>
             )}
           </div>
           <div className="text-[11px] text-muted font-mono truncate mt-0.5">{p.path}</div>
@@ -171,7 +171,7 @@ function ProjectCard({ p }: { p: ProjectSummary }) {
 function DocPill({ on, label }: { on: boolean; label: string }) {
   return (
     <span
-      className={`text-[10px] px-1.5 py-0.5 rounded border ${
+      className={`text-[11px] px-1.5 py-0.5 rounded border ${
         on ? "border-good/30 text-good bg-good/10" : "border-border text-muted/60"
       }`}
     >

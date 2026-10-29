@@ -6,6 +6,7 @@ import Link from "next/link";
 import type { Job } from "@/lib/types";
 import { fmtCost, fmtTokens, fmtDuration, timeAgo } from "@/lib/format";
 import StatusBadge from "@/components/StatusBadge";
+import { runTitle } from "@/lib/agents";
 
 interface ActiveSession {
   sessionId: string;
@@ -212,17 +213,17 @@ function LiveCard({ j, onStop }: { j: Job; onStop: () => void }) {
               {j.projectName}
             </Link>
             {isolated && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded border border-accent/30 text-accent font-mono shrink-0">
+              <span className="text-[11px] px-1.5 py-0.5 rounded border border-accent/30 text-accent font-mono shrink-0">
                 ⎇ {j.branch}
               </span>
             )}
             {j.stuck && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full border border-warn/40 bg-warn/15 text-warn shrink-0" title="Repeating the same action — may be stuck in a loop">
+              <span className="text-[11px] px-1.5 py-0.5 rounded-full border border-warn/40 bg-warn/15 text-warn shrink-0" title="Repeating the same action — may be stuck in a loop">
                 ⚠ possibly stuck
               </span>
             )}
           </div>
-          <p className="text-xs text-muted mt-1 line-clamp-2 leading-relaxed">{j.prompt}</p>
+          <p className="text-xs text-muted mt-1 line-clamp-2 leading-relaxed">{runTitle(j)}</p>
         </div>
         <button
           onClick={onStop}

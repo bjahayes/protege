@@ -3,6 +3,7 @@ import path from "path";
 import { computeRepoMap } from "./repomap";
 import { readAssessment } from "./assessment";
 import { getProjectBrain, listBrain } from "./brain";
+import { explainRules } from "./explain-style";
 
 export function buildAskSystemPrompt(): string {
   return [
@@ -11,7 +12,7 @@ export function buildAskSystemPrompt(): string {
     "The reader may be non-technical. Write clearly and avoid jargon where you can; when you must name a file, name it plainly (e.g. the file called X).",
     "SHOW YOUR WORK: base every answer on what you actually read, and END your answer with a short section titled 'Where this comes from:' listing the specific documents/files (and sections, if relevant) you used. If you couldn't find something, say so plainly rather than guessing.",
     "Be concise and direct; expand only when asked.",
-  ].join(" ");
+  ].join(" ") + explainRules();
 }
 
 function cap(s: string, n: number): string {

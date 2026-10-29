@@ -3,6 +3,7 @@
 import { apiFetch } from "@/lib/api-client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Job } from "@/lib/types";
+import { runTitle } from "@/lib/agents";
 
 const NOTIFY_STATES = new Set(["done", "error", "idle"]);
 const LS_KEY = "protege_notify_enabled";
@@ -31,12 +32,13 @@ export default function NotificationCenter() {
     const isolated = job.worktreeState && job.worktreeState !== "none" && job.worktreeState === "active";
     let title = "";
     if ((job.status as string) === "stuck") title = `⚠ Agent may be stuck — ${job.projectName}`;
+    else if (job.status === "done" && job.kind === "plan") title = `✓ A plan is ready to approve — ${job.projectName}`;
     else if (job.status === "done") title = isolated ? `✓ Ready to review — ${job.projectName}` : `✓ Agent finished — ${job.projectName}`;
     else if (job.status === "error") title = `✗ Agent failed — ${job.projectName}`;
     else if (job.status === "idle") title = `🖐 Agent needs you — ${job.projectName}`;
     else return;
 
-    const body = (job.prompt || "").slice(0, 140);
+    const body = runTitle(job).slice(0, 140);
     const url = `/agents?job=${job.id}`;
     const options: NotificationOptions = {
       body,

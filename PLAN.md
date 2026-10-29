@@ -176,8 +176,44 @@ view is the power-user side of the same app.)
       **"Already done"** + a one-click "do the next one". Source: `progress` in the project-detail API — real projects derive it
       from the task board (todo/doing/done titles); demo projects carry explicit `done`/`whatsLeft`. If there's no checklist,
       it says so honestly instead of showing a percentage. `ProgressBlock` in the Simple project page; `ProjectProgress` type.
+- [x] **Context panel beside the task conversation** (2026-10-29) — `ContextPanel` shows one picture at a time,
+      chosen by where the task is up to, on the same parts map throughout (only its markings change):
+      - **The plan** ("Show me the plan first" in the change box, remembered per browser): a read-only run
+        (`kind: "plan"`, edit tools and shell disallowed) replies with a sentence or two plus a `protege-plan` block
+        naming the parts it will change or add (`lib/plan.ts`). The map marks parts it will change (amber) and adds
+        new ones as dashed outlines; the steps are listed under the map. **Go ahead** continues the same session and
+        safe copy; a reply changes the plan; **Not now** throws the safe copy away.
+      - **While it works**: the parts being changed glow, and the **replay strip** (`ReplayStrip`, `lib/replay.ts`)
+        shows the run as stretches of reading / changing files / running steps / problems, each as long as it took;
+        tap a stretch for its steps; stripes of problems say it may be going round in circles. Replaces the old
+        five-stage track (the stage name starts the strip).
+      - **What changed**: the change as numbered steps (`lib/change-story.ts`, `lib/story-steps.ts`): the diff is cut
+        into small edits (each changed line, for a small change), Haiku sorts them into ≤5 steps by purpose and writes
+        a title and sentence for each, and every edit lands in exactly one step ("Other small changes" catches any it
+        leaves out). Each step is numbered on the part it touched, opens to its own code changes, and is a chip in the
+        chat. Kept in `data/stories/<job>.json`. Without the code (a run straight in a folder, or already kept), files
+        are grouped by part and named only from the agent's report.
+      - **See it working**: the app beside the map; while a change waits for Keep, **Before / After** shows the
+        project and the safe copy (`/_job/<id>/` on the preview server).
+      - Follows the task, and stops following when used ("Paused · Back to live"). Pick a part on the map →
+        **Talk about this part** puts it in the reply. Below wide screens: a Conversation / What's happening switch.
+      Also fixed on the way: replies shown twice (the result event squashes spacing); Keep reporting a merge that
+      happened as failed when copying the notes back hit a Windows file lock; git work on a safe copy now runs one
+      thing at a time (a commit racing the review's read could be missed, and Keep would lose the change).
+- [x] **The context panel on the Code page** (2026-10-29) — `ChatPanel` feeds the same `ContextPanel` from a
+      conversation (`lib/chat-panel.ts`): a Plan-mode plan waiting for approval is drawn on the map (its own lines at
+      once; the parts it touches from `POST /api/chat/plan-parts`, Haiku, kept in `data/plans/`); while Claude works,
+      the parts it is editing glow and the turn plays on the replay strip (chat items now carry `ts`, from the saved
+      transcript or when a live item arrives); afterwards, what changed is told in steps from Claude's own edits
+      (`POST /api/chat/story`, kept by content), for **the last change** or **the whole session**. Files outside the
+      folder (Claude's plan file) are left out. Opened and closed from **What's happening** in the chat header
+      (remembered; open by default on windows 1600 px wide or more); the file-changes panel takes its place while
+      open. **Talk about this part** puts an "About:" chip on the message box. The Code page's list of sessions can
+      be hidden («/») to give the chat and panel room.
 - [ ] Next: larger-type/accessibility pass; hide cost/tokens fully in Simple mode; filter project pickers to
-      real (registered/recent) projects; preview for projects that need a dev server (not just static).
+      real (registered/recent) projects; preview for projects that need a dev server (not just static);
+      a phone layout for the Simple shell (its sidebar takes 240 of 375 px); Code-page chats in demo projects
+      aren't in the session list (it filters `.demo` folders), so reopening one goes back to an empty page.
 
 NOTE ON DIRECTION: keep this a code/tool-BUILDING harness (approachable Claude Code), NOT a legal-work
 agent like Harvey. Simple mode is an approachable front door for lawyers who build tools — the domain

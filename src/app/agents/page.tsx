@@ -30,6 +30,12 @@ export default function AgentsPage() {
   const [recent, setRecent] = useState<Job[]>([]);
   const [view, setView] = useState<"agents" | "runs">("agents");
   const [sel, setSel] = useState<Sel>(null);
+  // On a phone the list and the chosen item take turns: picking one shows it, with a way back.
+  const [picked, setPicked] = useState(false);
+  const choose = (s: Sel) => {
+    setSel(s);
+    setPicked(!!s);
+  };
   const [, setTick] = useState(0);
   const [fProject, setFProject] = useState("all");
   const [fAgent, setFAgent] = useState("all");
@@ -53,8 +59,8 @@ export default function AgentsPage() {
     const agent = q.get("agent");
     if (job) {
       setView("runs");
-      setSel({ type: "run", id: job });
-    } else if (agent) setSel({ type: "agent", id: agent });
+      choose({ type: "run", id: job });
+    } else if (agent) choose({ type: "agent", id: agent });
     loadAgents();
     loadRuns();
     const poll = setInterval(loadRuns, 3000);
@@ -87,7 +93,7 @@ export default function AgentsPage() {
 
   return (
     <div className="flex h-full">
-      <div className="w-[380px] shrink-0 border-r border-border overflow-y-auto">
+      <div className={`w-full md:w-[380px] shrink-0 border-r border-border overflow-y-auto ${picked ? "hidden md:block" : ""}`}>
         <header className="px-5 py-4 border-b border-border sticky top-0 bg-bg z-10">
           <div className="flex items-center justify-between gap-2">
             <h1 className="text-lg font-bold">Agents</h1>
@@ -159,7 +165,7 @@ export default function AgentsPage() {
                   <p className="px-5 pb-2 text-[12px] text-muted leading-relaxed">
                     Make your own for a job you do often, such as checking a contract template against your firm&apos;s style
                     guide.{" "}
-                    <button onClick={() => setSel({ type: "new" })} className="text-accent hover:underline">
+                    <button onClick={() => choose({ type: "new" })} className="text-accent hover:underline">
                       Make one
                     </button>
                   </p>
@@ -170,7 +176,7 @@ export default function AgentsPage() {
                 {list.map((a) => (
                   <button
                     key={a.id}
-                    onClick={() => setSel({ type: "agent", id: a.id })}
+                    onClick={() => choose({ type: "agent", id: a.id })}
                     className={`w-full text-left px-5 py-2.5 border-l-2 flex gap-3 ${
                       sel?.type === "agent" && sel.id === a.id ? "border-accent bg-panel-2" : "border-transparent hover:bg-panel/60"
                     }`}
@@ -190,31 +196,34 @@ export default function AgentsPage() {
             {liveRuns.length > 0 && (
               <Section title="Running now">
                 {liveRuns.map((j) => (
-                  <RunRow key={j.id} j={j} label={label(j)} selected={sel?.type === "run" && sel.id === j.id} onClick={() => setSel({ type: "run", id: j.id })} />
+                  <RunRow key={j.id} j={j} label={label(j)} selected={sel?.type === "run" && sel.id === j.id} onClick={() => choose({ type: "run", id: j.id })} />
                 ))}
               </Section>
             )}
             <Section title="Earlier">
               {pastRuns.length === 0 && <div className="px-5 py-3 text-xs text-muted">No runs{fProject !== "all" || fAgent !== "all" ? " match" : " yet"}.</div>}
               {pastRuns.map((j) => (
-                <RunRow key={j.id} j={j} label={label(j)} selected={sel?.type === "run" && sel.id === j.id} onClick={() => setSel({ type: "run", id: j.id })} />
+                <RunRow key={j.id} j={j} label={label(j)} selected={sel?.type === "run" && sel.id === j.id} onClick={() => choose({ type: "run", id: j.id })} />
               ))}
             </Section>
           </>
         )}
       </div>
 
-      <div className="flex-1 min-w-0 overflow-y-auto">
+      <div className={`flex-1 min-w-0 overflow-y-auto ${picked ? "" : "hidden md:block"}`}>
+        <button onClick={() => setPicked(false)} className="md:hidden m-4 mb-0 text-accent text-sm">
+          ← All agents and runs
+        </button>
         {sel?.type === "agent" && (
           <AgentPanel
             key={sel.id}
             id={sel.id}
             onRan={openRun}
-            onEdit={() => setSel({ type: "edit", id: sel.id })}
-            onCopy={(a) => setSel({ type: "new", from: a })}
+            onEdit={() => choose({ type: "edit", id: sel.id })}
+            onCopy={(a) => choose({ type: "new", from: a })}
             onDeleted={() => {
               loadAgents();
-              setSel(null);
+              choose(null);
             }}
           />
         )}
@@ -225,9 +234,9 @@ export default function AgentsPage() {
             from={sel.type === "new" ? sel.from : undefined}
             onSaved={(a) => {
               loadAgents();
-              setSel({ type: "agent", id: a.id });
+              choose({ type: "agent", id: a.id });
             }}
-            onCancel={() => setSel(null)}
+            onCancel={() => choose(null)}
           />
         )}
         {sel?.type === "run" && <RunPanel job={allRuns.find((j) => j.id === sel.id)} jobId={sel.id} agents={agents} />}

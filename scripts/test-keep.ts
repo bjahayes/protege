@@ -5,7 +5,7 @@ import { execFileSync } from "child_process";
 import fs from "fs";
 import os from "os";
 import path from "path";
-import { applyWorktree, commitWorktree, createWorktree, saveChanges, unsavedPaths, removeWorktree } from "../src/lib/git.ts";
+import { applyWorktree, commitWorktree, createWorktree, saveChanges, unsavedPaths, removeWorktree, worktreeDiff } from "../src/lib/git.ts";
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "protege-keep-test-"));
 const emptyConfig = path.join(tmp, "empty.gitconfig");
@@ -60,6 +60,18 @@ const changed = (await unsavedPaths(repo)).filter((p) => !before.has(p));
 check(await saveChanges(repo, "protege: direct run", changed), "a direct run's change is saved to history");
 const left = await unsavedPaths(repo);
 check(left.length === 1 && left[0] === "draft.txt", "a file that was already unsaved before the run is left alone");
+
+// When a run ends, its change is committed while the review and the panel read it: all at once.
+const wt2 = await createWorktree(repo, "racetest-0000-0000");
+fs.appendFileSync(path.join(wt2.worktreePath, "notes.txt"), "the run's change\n");
+const [d1, committed, d2] = await Promise.all([
+  worktreeDiff({ worktreePath: wt2.worktreePath, baseRef: wt2.baseRef }),
+  commitWorktree(wt2.worktreePath, "task change"),
+  worktreeDiff({ worktreePath: wt2.worktreePath, baseRef: wt2.baseRef }, { context: 1 }),
+]);
+check(committed, "the change is committed while it's being read");
+check(d1.available && d1.files.some((f) => f.path === "notes.txt") && d2.available && d2.files.some((f) => f.path === "notes.txt"), "reads at the same moment both see the change");
+await removeWorktree(repo, wt2.worktreePath, wt2.branch);
 
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log(failures ? `${failures} failed` : "all passed");

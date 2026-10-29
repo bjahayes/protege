@@ -104,8 +104,8 @@ export default function BrainPage() {
           <BrainChat />
         </div>
       ) : (
-    <div className="flex flex-1 min-h-0">
-      <div className="w-[350px] shrink-0 border-r border-border flex flex-col">
+    <div className="flex flex-col md:flex-row flex-1 min-h-0">
+      <div className="w-full md:w-[350px] shrink-0 max-h-[45vh] md:max-h-none border-b md:border-b-0 md:border-r border-border flex flex-col">
         <div className="p-4 border-b border-border">
           <input
             value={q}
@@ -163,7 +163,7 @@ export default function BrainPage() {
 function Group({ title, count, children }: { title: string; count: number; children: React.ReactNode }) {
   return (
     <div className="py-1.5">
-      <div className="px-4 py-1 text-[10px] uppercase tracking-wide text-muted/70 font-semibold flex justify-between">
+      <div className="px-4 py-1 text-[11px] uppercase tracking-wide text-muted/70 font-semibold flex justify-between">
         <span>{title}</span>
         <span>{count}</span>
       </div>
@@ -194,7 +194,7 @@ function Item({
     >
       <div className="text-sm flex items-center gap-1.5">
         <span className="truncate">{title}</span>
-        {badge && <span className="text-[9px] text-running shrink-0">{badge}</span>}
+        {badge && <span className="text-[11px] text-running shrink-0">{badge}</span>}
       </div>
       {sub && <div className="text-[11px] text-muted truncate mt-0.5">{sub}</div>}
     </button>

@@ -221,7 +221,7 @@ function FilePatch({ f }: { f: DiffFile }) {
       >
         <span className="text-muted text-xs">{open ? "▾" : "▸"}</span>
         <span className="font-mono text-xs truncate flex-1">{f.path}</span>
-        <span className="text-[10px] text-muted">{STATUS_LABEL[f.status] || f.status}</span>
+        <span className="text-[11px] text-muted">{STATUS_LABEL[f.status] || f.status}</span>
         <span className="text-[11px] text-good">+{f.additions}</span>
         <span className="text-[11px] text-bad">−{f.deletions}</span>
       </button>

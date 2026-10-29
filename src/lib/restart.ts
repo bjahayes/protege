@@ -24,6 +24,8 @@ export interface RestartState {
 
 interface Internal {
   phase: RestartPhase;
+  /** Restart as soon as the new version is built, without waiting for anything mid-turn. */
+  force?: boolean;
   startedAt?: number;
   waitingFor?: string[];
   error?: string;
@@ -54,8 +56,19 @@ function busy(): string[] {
   return out;
 }
 
-export function requestRestart(): RestartState {
+export function requestRestart(opts: { force?: boolean } = {}): RestartState {
   const s = st();
+  // Already built and waiting: restart now.
+  if (opts.force && s.phase === "waiting") {
+    clearInterval(s.timer);
+    s.phase = "restarting";
+    process.send!({ type: "swap", dist: nextFolder() });
+    return restartState();
+  }
+  if (opts.force && s.phase === "building") {
+    s.force = true;
+    return restartState();
+  }
   if (!supported()) {
     s.phase = "failed";
     s.error = "Protégé can only restart itself when it was started with npm start.";
@@ -66,6 +79,7 @@ export function requestRestart(): RestartState {
   s.startedAt = Date.now();
   s.error = undefined;
   s.waitingFor = undefined;
+  s.force = !!opts.force;
 
   const dist = nextFolder();
   const nextBin = path.join(process.cwd(), "node_modules", "next", "dist", "bin", "next");
@@ -93,7 +107,8 @@ export function requestRestart(): RestartState {
     const check = () => {
       const left = busy();
       s.waitingFor = left;
-      if (left.length) return;
+      // Forced, it doesn't wait: what is mid-turn stops, and carries on from its saved history.
+      if (left.length && !s.force) return;
       clearInterval(s.timer);
       s.phase = "restarting";
       process.send!({ type: "swap", dist });

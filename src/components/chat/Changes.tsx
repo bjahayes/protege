@@ -4,6 +4,7 @@
 // that edited files, and a panel beside the chat with each file's diff.
 
 import { useEffect, useState } from "react";
+import { ResizeHandle, usePanelWidth } from "../Resizer";
 import { totals, type DiffLine, type FileChange } from "@/lib/chat-changes";
 
 export function DiffLines({ lines, className = "max-h-80" }: { lines: DiffLine[]; className?: string }) {
@@ -80,13 +81,16 @@ export function ChangesPanel({ files, open, onOpen, onClose }: { files: FileChan
   const t = totals(files);
   const cur = files.find((f) => f.rel === open) || files[0];
   const [split, setSplit] = useState(false);
+  const size = usePanelWidth("protege.panel.changes", 640, 320, (vw) => vw - 560);
   useEffect(() => {
     const k = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", k);
     return () => window.removeEventListener("keydown", k);
   }, [onClose]);
   return (
-    <aside className="w-[min(46%,720px)] shrink-0 border-l border-border flex flex-col min-h-0 bg-bg">
+    <>
+    <ResizeHandle side="right" label="Files changed panel" width={size.width} onChange={size.set} onReset={size.reset} min={320} />
+    <aside style={{ width: size.width }} className="shrink-0 border-l border-border flex flex-col min-h-0 bg-bg max-md:fixed max-md:inset-0 max-md:top-12 max-md:z-30 max-md:!w-full max-md:border-l-0">
       <div className="px-4 py-3 border-b border-border flex items-center gap-2">
         <span className="text-sm font-semibold">
           {files.length} file{files.length === 1 ? "" : "s"} changed
@@ -139,5 +143,6 @@ export function ChangesPanel({ files, open, onOpen, onClose }: { files: FileChan
         </>
       )}
     </aside>
+    </>
   );
 }

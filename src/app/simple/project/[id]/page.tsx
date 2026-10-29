@@ -13,6 +13,7 @@ import MarkdownView from "@/components/MarkdownView";
 import { isDemoId } from "@/lib/demo-client";
 import GettingStarted from "@/components/simple/GettingStarted";
 import type { StarterInfo } from "@/lib/starter-steps";
+import { runTitle } from "@/lib/agents";
 
 const EXAMPLES = [
   "Fix a small mistake I noticed",
@@ -35,6 +36,23 @@ export default function SimpleProject({ params }: { params: Promise<{ id: string
   const [busy, setBusy] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [changingParts, setChangingParts] = useState<Set<string>>(new Set());
+  // "Show me the plan first": remembered on this computer.
+  const [planFirst, setPlanFirst] = useState(false);
+  useEffect(() => {
+    try {
+      setPlanFirst(localStorage.getItem("protege-plan-first") === "1");
+    } catch {
+      /* no storage: start unticked */
+    }
+  }, []);
+  const choosePlanFirst = (v: boolean) => {
+    setPlanFirst(v);
+    try {
+      localStorage.setItem("protege-plan-first", v ? "1" : "0");
+    } catch {
+      /* not remembered */
+    }
+  };
   // Projects made in Start something new: their getting-started steps.
   const [starter, setStarter] = useState<StarterInfo | null>(null);
   const demo = isDemoId(id);
@@ -84,10 +102,8 @@ export default function SimpleProject({ params }: { params: Promise<{ id: string
         agentId: "make-change",
         permissionMode: "acceptEdits",
         isolate: gitRepo,
-        autoVerify: gitRepo,
-        autoFix: gitRepo,
         primeContext: true,
-        maintainTasks: true,
+        ...(planFirst ? { planFirst: true } : { autoVerify: gitRepo, autoFix: gitRepo, maintainTasks: true }),
       }),
     });
     const j = await r.json();
@@ -227,6 +243,13 @@ export default function SimpleProject({ params }: { params: Promise<{ id: string
               </button>
             ))}
           </div>
+          <label className="mt-3 flex items-start gap-2 text-[12.5px] cursor-pointer select-none w-fit">
+            <input type="checkbox" checked={planFirst} onChange={(e) => choosePlanFirst(e.target.checked)} className="mt-0.5 accent-current" />
+            <span>
+              Show me the plan first
+              <span className="block text-[11px] text-muted">Protégé reads your work and drafts a plan, drawn on the parts map. Nothing changes until you say go ahead.</span>
+            </span>
+          </label>
           <div className="flex items-center justify-between mt-3">
             <p className="text-[11px] text-muted max-w-sm">
               {gitRepo
@@ -238,7 +261,7 @@ export default function SimpleProject({ params }: { params: Promise<{ id: string
               disabled={busy || !taskText.trim()}
               className="px-4 py-2 rounded-xl bg-accent/20 border border-accent/40 text-accent hover:bg-accent/30 text-sm font-semibold disabled:opacity-40"
             >
-              {busy ? "Starting…" : "Start"}
+              {busy ? "Starting…" : planFirst ? "Plan it" : "Start"}
             </button>
           </div>
         </section>
@@ -247,13 +270,13 @@ export default function SimpleProject({ params }: { params: Promise<{ id: string
       {/* A run in progress, shown as a live conversation with Claude Code */}
       {runningJob && (
         <section className="mt-5">
-          <h2 className="text-sm font-semibold text-muted mb-2">Being built right now</h2>
           <SimpleTask
             key={runningJob}
             projectId={id}
             firstJobId={runningJob}
             gitRepo={gitRepo}
-            components={assessment?.components || []}
+            assessment={assessment}
+            previewEntry={previewEntry}
             onTouchedParts={setChangingParts}
             onFinished={() => {
               load();
@@ -321,7 +344,8 @@ export default function SimpleProject({ params }: { params: Promise<{ id: string
 
       </div>
       <div className="min-w-0">
-      {/* How it fits together: the parts map */}
+      {/* How it fits together: the parts map (while a task is open, it's in the task's panel) */}
+      {!runningJob && (
       <section className="mt-6 xl:mt-5">
         <h2 className="text-sm font-semibold text-muted mb-2">How it fits together</h2>
         {assessment?.components?.length ? (
@@ -351,6 +375,7 @@ export default function SimpleProject({ params }: { params: Promise<{ id: string
           </div>
         )}
       </section>
+      )}
 
       {/* Recent activity — a plain history you can undo */}
       {jobs.length > 0 && !runningJob && (
@@ -434,7 +459,7 @@ function ProgressBlock({
           <ul className="space-y-1">
             {remaining.map((t) => (
               <li key={t.id} className="flex items-start gap-2.5 text-sm">
-                <span className="mt-0.5 shrink-0 w-4 h-4 rounded-full border border-border flex items-center justify-center text-[9px] text-muted">○</span>
+                <span className="mt-0.5 shrink-0 w-4 h-4 rounded-full border border-border flex items-center justify-center text-[11px] text-muted">○</span>
                 <span className="flex-1">{t.title}</span>
               </li>
             ))}
@@ -457,7 +482,7 @@ function ProgressBlock({
           <ul className="space-y-1 mt-1.5">
             {done.map((t) => (
               <li key={t.id} className="flex items-start gap-2.5 text-sm text-muted">
-                <span className="mt-0.5 shrink-0 w-4 h-4 rounded-full bg-good/15 border border-good/40 flex items-center justify-center text-[9px] text-good">✓</span>
+                <span className="mt-0.5 shrink-0 w-4 h-4 rounded-full bg-good/15 border border-good/40 flex items-center justify-center text-[11px] text-good">✓</span>
                 <span className="flex-1 line-through">{t.title}</span>
               </li>
             ))}
@@ -488,7 +513,7 @@ function HistoryItem({ job, onChange, title }: { job: Job; onChange: () => void;
   return (
     <div className="px-4 py-3 flex items-center gap-3">
       <span className={`text-xs font-medium shrink-0 w-24 ${TONE_CLASS[ps.tone]}`}>{ps.label}</span>
-      <span className="text-sm truncate flex-1">{title || job.prompt}</span>
+      <span className="text-sm truncate flex-1">{title || runTitle(job)}</span>
       {msg && <span className="text-[11px] text-warn max-w-[30%] truncate">{msg}</span>}
       {undone ? (
         <span className="text-[11px] text-muted shrink-0">undone</span>

@@ -102,11 +102,14 @@ export function SimpleReview({
   resultText,
   onFinished,
   onApplied,
+  compact,
 }: {
   jobId: string;
   resultText: string;
   onFinished?: () => void;
   onApplied?: () => void;
+  /** Beside the context panel, which shows what changed: just the decision, not the file list. */
+  compact?: boolean;
 }) {
   const [diff, setDiff] = useState<JobDiff | null>(null);
   const [state, setState] = useState<"review" | "applied" | "discarded" | "busy">("review");
@@ -149,9 +152,9 @@ export function SimpleReview({
   // Hide internal metadata (the checklist file etc.) — show only real content changes.
   const files = (diff?.files || []).filter((f) => !/^\.protege\//.test(f.path.replace(/\\/g, "/")));
   return (
-    <div className="rounded-2xl border border-border bg-panel p-6">
+    <div className={`rounded-2xl border border-border bg-panel ${compact ? "p-4" : "p-6"}`}>
       <div className="text-base font-medium mb-1">Protégé made some changes</div>
-      {resultText && <p className="text-sm text-muted mb-3 leading-relaxed">{resultText.split("\n")[0]}</p>}
+      {resultText && !compact && <p className="text-sm text-muted mb-3 leading-relaxed">{resultText.split("\n")[0]}</p>}
 
       {!diff ? (
         <div className="text-sm text-muted">Preparing a summary…</div>
@@ -159,6 +162,12 @@ export function SimpleReview({
         <p className="text-sm text-muted">It didn&apos;t end up changing anything.</p>
       ) : (
         <>
+          {compact ? (
+            <p className="text-sm text-muted mb-3">
+              It changed {files.length} file{files.length > 1 ? "s" : ""} on a safe copy. Nothing is kept until you say so.
+            </p>
+          ) : (
+          <>
           <div className="text-sm text-muted mb-2">It changed {files.length} file{files.length > 1 ? "s" : ""}:</div>
           <div className="rounded-xl border border-border divide-y divide-border mb-4">
             {files.slice(0, 20).map((f) => (
@@ -170,6 +179,8 @@ export function SimpleReview({
               </div>
             ))}
           </div>
+          </>
+          )}
           {unsaved && <UnsavedNotice message={unsaved.message} files={unsaved.files} busy={state === "busy"} onSaveAndKeep={() => apply(true)} />}
           {error && <p className="text-sm text-bad mb-3">{error}</p>}
           <div className="flex items-center gap-3">

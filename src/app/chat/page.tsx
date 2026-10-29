@@ -9,6 +9,7 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import ChatView from "@/components/chat/ChatView";
 import { timeAgo } from "@/lib/format";
+import { ResizeHandle, usePanelWidth } from "@/components/Resizer";
 
 interface SessionRow {
   sessionId: string;
@@ -30,6 +31,8 @@ interface ProjectRow {
 
 // The session open last, in this browser: coming back to Code with none chosen opens it again.
 const LAST_CHAT = "protege.chat.last";
+// Whether the list of sessions is showing (hidden, the chat and its context panel get the room).
+const LIST_OPEN = "protege.chat.list";
 
 function ChatPage() {
   const router = useRouter();
@@ -43,6 +46,21 @@ function ChatPage() {
   const [filter, setFilter] = useState("");
   const [search, setSearch] = useState("");
   const [picking, setPicking] = useState(false);
+  const [listOpen, setListOpen] = useState(true);
+  const listSize = usePanelWidth("protege.panel.sessions", 256, 200, 480);
+  useEffect(() => {
+    try {
+      // Until the person chooses, the list shows on windows wide enough for it and the chat.
+      const saved = localStorage.getItem(LIST_OPEN);
+      setListOpen(saved ? saved !== "0" : window.innerWidth >= 1200);
+    } catch {}
+  }, []);
+  const showList = (v: boolean) => {
+    setListOpen(v);
+    try {
+      localStorage.setItem(LIST_OPEN, v ? "1" : "0");
+    } catch {}
+  };
   // Remembers where a chat started here lives, until the saved list catches up.
   const [startedIn, setStartedIn] = useState<Record<string, ProjectRow>>({});
 
@@ -112,27 +130,48 @@ function ChatPage() {
 
   const startNew = (projectId: string) => {
     setPicking(false);
+    if (window.innerWidth < 768) setListOpen(false);
     router.push(`/chat?project=${projectId}`);
   };
 
   return (
     <div className="flex h-full min-h-0">
-      <aside className="w-72 shrink-0 border-r border-border flex flex-col min-h-0">
+      {!listOpen && (
+        <div className="shrink-0 border-r border-border flex flex-col items-center py-3">
+          <button
+            onClick={() => showList(true)}
+            aria-label="Show the list of sessions"
+            title="Show the list of sessions"
+            className="w-7 h-7 rounded-lg text-muted hover:text-text hover:bg-panel-2"
+          >
+            »
+          </button>
+        </div>
+      )}
+      <aside style={{ width: listSize.width }} className={`shrink-0 border-r border-border flex-col min-h-0 bg-bg max-md:fixed max-md:inset-0 max-md:top-12 max-md:z-30 max-md:!w-full ${listOpen ? "flex" : "hidden"}`}>
         <div className="p-3 flex flex-col gap-2 border-b border-border">
-          <div className="relative">
+          <div className="relative flex items-center gap-2">
+            <button
+              onClick={() => showList(false)}
+              aria-label="Hide the list of sessions"
+              title="Hide the list of sessions"
+              className="order-2 shrink-0 w-7 h-7 rounded-lg text-muted hover:text-text hover:bg-panel-2"
+            >
+              «
+            </button>
             <button
               onClick={() => setPicking(!picking)}
-              className="w-full text-left px-3 py-2 rounded-lg bg-accent/15 border border-accent/40 text-accent hover:bg-accent/25 text-sm font-medium"
+              className="flex-1 text-left px-3 py-2 rounded-lg bg-accent/15 border border-accent/40 text-accent hover:bg-accent/25 text-sm font-medium"
             >
               ＋ New session
             </button>
             {picking && (
-              <div className="absolute z-20 left-0 right-0 mt-1 max-h-80 overflow-y-auto rounded-lg border border-border bg-panel shadow-xl">
+              <div className="absolute z-20 left-0 right-0 top-full mt-1 max-h-80 overflow-y-auto rounded-lg border border-border bg-panel shadow-xl">
                 <div className="px-3 py-1.5 text-[11px] text-muted border-b border-border">Which folder should Claude work in?</div>
                 {projects.map((p) => (
                   <button key={p.id} onClick={() => startNew(p.id)} className="w-full text-left px-3 py-1.5 hover:bg-panel-2">
                     <div className="text-[13px]">{p.name}</div>
-                    <div className="text-[10.5px] text-muted font-mono truncate">{p.path}</div>
+                    <div className="text-[11px] text-muted font-mono truncate">{p.path}</div>
                   </button>
                 ))}
               </div>
@@ -161,7 +200,11 @@ function ChatPage() {
           {shown.map((s) => (
             <button
               key={s.sessionId}
-              onClick={() => router.push(`/chat?s=${s.sessionId}`)}
+              onClick={() => {
+                router.push(`/chat?s=${s.sessionId}`);
+                // On a phone the list covers the chat: close it to show the session picked.
+                if (window.innerWidth < 768) setListOpen(false);
+              }}
               aria-label={`${s.title}, ${s.projectName}`}
               className={`w-full text-left px-2.5 py-2 rounded-lg mb-0.5 ${s.sessionId === sid ? "bg-panel-2" : "hover:bg-panel-2/60"}`}
             >
@@ -179,6 +222,9 @@ function ChatPage() {
           {!shown.length && <div className="text-[12.5px] text-muted px-2.5 py-3">{loaded ? "No sessions yet." : "Loading sessions…"}</div>}
         </div>
       </aside>
+      {listOpen && (
+        <ResizeHandle side="left" label="List of sessions" width={listSize.width} onChange={listSize.set} onReset={listSize.reset} min={200} />
+      )}
 
       <section className="flex-1 min-w-0 min-h-0">
         {project ? (

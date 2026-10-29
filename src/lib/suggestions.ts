@@ -4,6 +4,7 @@ import { metaPath } from "./meta";
 import { readFileSafe, readTasks } from "./docs";
 import { readAssessment } from "./assessment";
 import { readPlainSummary } from "./plain-summary";
+import { explainRules } from "./explain-style";
 
 export interface Suggestion {
   kind: "do" | "ask";
@@ -59,6 +60,7 @@ export function buildSuggestionsPrompt(context: string): string {
     `- Mix practical tasks ("do") and helpful questions ("ask"). Be specific to this project, not generic.\n` +
     `- Good examples: "Add a summary at the top of the main document", "Explain what this project is for in simple terms", "Draft a first version of the missing section".\n` +
     `- Return ONLY a JSON array, no prose: [{"kind":"do"|"ask","text":"..."}]\n\n` +
-    `PROJECT:\n${context || "(no description available yet)"}`
+    `PROJECT:\n${context || "(no description available yet)"}` +
+    explainRules({ json: true })
   );
 }

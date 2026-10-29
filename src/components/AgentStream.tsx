@@ -102,7 +102,7 @@ export default function AgentStream({ jobId, compact }: Props) {
             <StatusBadge status={job.status} />
             <span className="text-xs text-muted font-mono truncate">{job.model || "…"}</span>
             {hasWorktree && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded border border-accent/30 text-accent font-mono shrink-0">
+              <span className="text-[11px] px-1.5 py-0.5 rounded border border-accent/30 text-accent font-mono shrink-0">
                 ⎇ {job.branch}
               </span>
             )}

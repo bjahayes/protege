@@ -13,13 +13,16 @@ import RunForm from "@/components/RunForm";
 import AgentStream from "@/components/AgentStream";
 import StatusBadge from "@/components/StatusBadge";
 import AssessmentView from "@/components/AssessmentView";
-import ProjectDiagram from "@/components/ProjectDiagram";
+import PartsMap from "@/components/simple/PartsMap";
+import TurnHistory from "@/components/TurnHistory";
+import Mermaid from "@/components/Mermaid";
 import DocVersions from "@/components/DocVersions";
 import RepoMapView from "@/components/RepoMapView";
 import BrainView from "@/components/BrainView";
 import { useBrainAvailable } from "@/lib/use-brain";
 import TranscriptText from "@/components/TranscriptText";
 import type { Assessment } from "@/lib/assessment";
+import { runTitle } from "@/lib/agents";
 
 interface Docs {
   design: string | null;
@@ -30,7 +33,7 @@ interface Docs {
   tasks: Task[];
 }
 
-type Tab = "overview" | "map" | "brain" | "design" | "plan" | "tasks" | "sessions" | "run";
+type Tab = "overview" | "map" | "brain" | "design" | "plan" | "tasks" | "history" | "sessions" | "run";
 
 export default function ProjectDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -44,6 +47,11 @@ export default function ProjectDetail({ params }: { params: Promise<{ id: string
   const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [gitRepo, setGitRepo] = useState(false);
   const [tab, setTab] = useState<Tab>("overview");
+  // A link can open a tab directly (?tab=history).
+  useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get("tab") as Tab | null;
+    if (t) setTab(t);
+  }, []);
   const brain = useBrainAvailable();
   const [activeJob, setActiveJob] = useState<string | null>(null);
   const [resumeInfo, setResumeInfo] = useState<{ sessionId: string; label: string } | null>(null);
@@ -98,6 +106,7 @@ export default function ProjectDetail({ params }: { params: Promise<{ id: string
     { key: "design", label: "Design", badge: docs.design ? undefined : "—" },
     { key: "plan", label: "Plan", badge: docs.plan ? undefined : "—" },
     { key: "tasks", label: "Tasks", badge: project.tasks.todo + project.tasks.doing + project.tasks.done || undefined },
+    { key: "history", label: "History" },
     { key: "sessions", label: "Sessions", badge: sessions.length || undefined },
     { key: "run", label: "Run", badge: liveJobs.length || undefined },
   ];
@@ -106,7 +115,7 @@ export default function ProjectDetail({ params }: { params: Promise<{ id: string
     <div className="flex flex-col h-full">
       <header className="px-6 pt-5 pb-0 border-b border-border">
         <Link href="/" className="text-accent text-xs hover:underline">← Dashboard</Link>
-        <div className="flex items-start justify-between gap-4 mt-2">
+        <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3 mt-2">
           <div className="min-w-0">
             <div className="flex items-center gap-3">
               <h1 className="text-xl font-bold truncate">{project.name}</h1>
@@ -123,7 +132,7 @@ export default function ProjectDetail({ params }: { params: Promise<{ id: string
             <div className="text-[11px] text-muted font-mono truncate mt-0.5">{project.path}</div>
           </div>
           {/* What you can do here: at the top, on every tab */}
-          <div className="flex items-center gap-2 shrink-0 ml-auto">
+          <div className="flex flex-wrap items-center gap-2 ml-auto">
             <Link
               href={`/assistant?project=${id}`}
               className="px-3 py-1.5 rounded-lg border border-border text-muted text-sm hover:text-text hover:border-accent/40"
@@ -144,7 +153,7 @@ export default function ProjectDetail({ params }: { params: Promise<{ id: string
           </div>
         </div>
 
-        <nav className="flex gap-1 mt-3 -mb-px">
+        <nav className="flex gap-1 mt-3 -mb-px overflow-x-auto [scrollbar-width:none]">
           {tabs.map((t) => (
             <button
               key={t.key}
@@ -157,7 +166,7 @@ export default function ProjectDetail({ params }: { params: Promise<{ id: string
             >
               {t.label}
               {t.badge !== undefined && (
-                <span className="ml-1.5 text-[10px] text-muted">{t.badge}</span>
+                <span className="ml-1.5 text-[11px] text-muted">{t.badge}</span>
               )}
             </button>
           ))}
@@ -166,7 +175,21 @@ export default function ProjectDetail({ params }: { params: Promise<{ id: string
 
       <div className="flex-1 min-h-0 overflow-y-auto p-6">
         {tab === "overview" && (
-          <Overview project={project} docs={docs} documents={documents} jobs={jobs} assessment={assessment} projectId={id} onReload={load} onGoRun={() => setTab("run")} onGoMap={() => setTab("map")} />
+          <Overview
+            project={project}
+            docs={docs}
+            documents={documents}
+            jobs={jobs}
+            assessment={assessment}
+            projectId={id}
+            onReload={load}
+            onGoRun={() => setTab("run")}
+            onGoMap={() => setTab("map")}
+            onOpenRun={(jid) => {
+              setActiveJob(jid);
+              setTab("run");
+            }}
+          />
         )}
         {tab === "map" && (
           <MapTab
@@ -192,6 +215,7 @@ export default function ProjectDetail({ params }: { params: Promise<{ id: string
             <TaskBoard key={project.tasks.todo + "-" + project.tasks.doing + "-" + project.tasks.done} projectId={id} initial={docs.tasks} />
           </div>
         )}
+        {tab === "history" && <TurnHistory projectId={id} assessment={assessment} />}
         {tab === "sessions" && <Sessions sessions={sessions} cwd={project.path} onContinue={startResume} />}
         {tab === "run" && (
           <div className="max-w-3xl">
@@ -228,7 +252,7 @@ export default function ProjectDetail({ params }: { params: Promise<{ id: string
                         >
                           <button onClick={() => setActiveJob(j.id)} className="flex items-center gap-3 min-w-0 flex-1 text-left">
                             <StatusBadge status={j.status} />
-                            <span className="text-sm truncate">{j.prompt}</span>
+                            <span className="text-sm truncate">{runTitle(j)}</span>
                           </button>
                           <span className="text-[11px] text-muted shrink-0">{timeAgo(j.startedAt)}</span>
                           {j.sessionId && (
@@ -254,6 +278,15 @@ export default function ProjectDetail({ params }: { params: Promise<{ id: string
   );
 }
 
+type OverviewTab = "documents" | "architecture" | "flowchart" | "runs";
+const OVERVIEW_TAB = "protege.overview.tab";
+
+/**
+ * The Overview: a strip of where the project is up to, then four sub-tabs: its documents (the
+ * status and every document with its versions), its architecture (what it is, how finished, its
+ * risks, and the parts map), its flowchart (how the pieces call each other), and its agent runs (with
+ * the checkpoints to go back to). The sub-tab chosen is remembered.
+ */
 function Overview({
   project,
   docs,
@@ -264,6 +297,7 @@ function Overview({
   onReload,
   onGoRun,
   onGoMap,
+  onOpenRun,
 }: {
   project: ProjectSummary;
   docs: Docs;
@@ -274,9 +308,31 @@ function Overview({
   onReload: () => void;
   onGoRun: () => void;
   onGoMap: () => void;
+  onOpenRun: (jobId: string) => void;
 }) {
-  const facts = (
-    <div className="min-w-0 space-y-5">
+  const [sub, setSub] = useState<OverviewTab>("documents");
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem(OVERVIEW_TAB) as OverviewTab | null;
+      if (v && ["documents", "architecture", "flowchart", "runs"].includes(v)) setSub(v);
+    } catch {}
+  }, []);
+  const pick = (v: OverviewTab) => {
+    setSub(v);
+    try {
+      localStorage.setItem(OVERVIEW_TAB, v);
+    } catch {}
+  };
+  const hasFlow = !!assessment?.architecture?.mermaid;
+  const SUBS: { key: OverviewTab; label: string; badge?: number }[] = [
+    { key: "documents", label: "Documents", badge: documents.length || undefined },
+    { key: "architecture", label: "Architecture", badge: assessment?.components?.length || undefined },
+    { key: "flowchart", label: "Flowchart" },
+    { key: "runs", label: "Agent runs", badge: jobs.length || undefined },
+  ];
+
+  return (
+    <div className="space-y-5">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Stat label="To do" value={project.tasks.todo} color="text-text" />
         <Stat label="In progress" value={project.tasks.doing} color="text-running" />
@@ -284,64 +340,120 @@ function Overview({
         <Stat label="Sessions" value={project.sessionCount} color="text-text" />
       </div>
 
+      <div className="inline-flex flex-wrap rounded-lg border border-border p-0.5 text-[13px]" role="tablist" aria-label="Parts of the overview">
+        {SUBS.map((t) => (
+          <button
+            key={t.key}
+            role="tab"
+            aria-selected={sub === t.key}
+            onClick={() => pick(t.key)}
+            className={`px-3 py-1.5 rounded-md inline-flex items-center gap-1.5 ${sub === t.key ? "bg-panel-2 text-text font-medium" : "text-muted hover:text-text"}`}
+          >
+            {t.label}
+            {t.badge != null && <span className="text-[11px] text-muted tabular-nums">{t.badge}</span>}
+          </button>
+        ))}
+      </div>
 
-      <section>
-        <h2 className="text-sm font-semibold text-muted mb-2">Status</h2>
-        <div className="rounded-xl border border-border bg-panel p-4">
-          {docs.status ? (
-            <MarkdownView content={docs.status} />
-          ) : project.summary ? (
-            <p className="text-sm text-muted">
-              Latest session: “{project.summary}”. No generated <code className="text-xs">status.md</code> yet — run the{" "}
-              <button onClick={onGoRun} className="text-accent underline">Summarize status</button> job to create one.
-            </p>
-          ) : (
-            <p className="text-sm text-muted">No status yet.</p>
-          )}
+      {sub === "documents" && (
+        <div className="max-w-4xl space-y-5">
+          <section>
+            <h2 className="text-sm font-semibold text-muted mb-2">Status</h2>
+            <div className="rounded-xl border border-border bg-panel p-4">
+              {docs.status ? (
+                <MarkdownView content={docs.status} />
+              ) : project.summary ? (
+                <p className="text-sm text-muted">
+                  Latest session: “{project.summary}”. No generated <code className="text-xs">status.md</code> yet — run the{" "}
+                  <button onClick={onGoRun} className="text-accent underline">Summarize status</button> job to create one.
+                </p>
+              ) : (
+                <p className="text-sm text-muted">No status yet.</p>
+              )}
+            </div>
+          </section>
+          <DocumentsList projectId={projectId} documents={documents} onChanged={onReload} />
         </div>
-      </section>
-
-      <DocumentsList projectId={projectId} documents={documents} onChanged={onReload} />
-
-      {jobs.length > 0 && (
-        <section>
-          <h2 className="text-sm font-semibold text-muted mb-2">Recent agent runs</h2>
-          <div className="rounded-xl border border-border bg-panel divide-y divide-border">
-            {jobs.slice(0, 6).map((j) => (
-              <div key={j.id} className="flex items-center gap-3 px-4 py-2.5">
-                <StatusBadge status={j.status} />
-                <span className="text-sm truncate flex-1">{j.prompt}</span>
-                <span className="text-[11px] text-muted shrink-0">
-                  {fmtTokens((j.inputTokens || 0) + (j.outputTokens || 0))} tok · {fmtCost(j.costUsd)}
-                </span>
-                <span className="text-[11px] text-muted shrink-0 w-16 text-right">{timeAgo(j.startedAt)}</span>
-              </div>
-            ))}
-          </div>
-        </section>
       )}
 
-      {project.exists && <CheckpointsPanel projectId={projectId} onRestore={onReload} />}
+      {sub === "architecture" &&
+        (assessment ? (
+          <div className="space-y-5">
+            <div className="max-w-4xl">
+              <AssessmentSummary a={assessment} onGoMap={onGoMap} />
+            </div>
+            {assessment.components?.length ? (
+              <section>
+                <h2 className="text-sm font-semibold text-muted mb-2">How the parts fit together</h2>
+                <div className="rounded-xl border border-border bg-panel p-5">
+                  <PartsMap assessment={assessment} />
+                </div>
+              </section>
+            ) : null}
+          </div>
+        ) : (
+          <NoMapYet onGoMap={onGoMap} />
+        ))}
+
+      {sub === "flowchart" &&
+        (hasFlow ? (
+          <section>
+            {assessment!.architecture.description && (
+              <p className="text-[12.5px] text-muted mb-3 leading-relaxed max-w-prose">{assessment!.architecture.description}</p>
+            )}
+            <Mermaid chart={assessment!.architecture.mermaid} />
+          </section>
+        ) : (
+          <NoMapYet onGoMap={onGoMap} />
+        ))}
+
+      {sub === "runs" && (
+        <div className="max-w-4xl space-y-5">
+          {jobs.length ? (
+            <section>
+              <h2 className="text-sm font-semibold text-muted mb-2">Agent runs in this project</h2>
+              <div className="rounded-xl border border-border bg-panel divide-y divide-border">
+                {jobs.slice(0, 40).map((j) => (
+                  <button
+                    key={j.id}
+                    onClick={() => onOpenRun(j.id)}
+                    className="w-full text-left flex items-center gap-3 px-4 py-2.5 hover:bg-panel-2/60"
+                    title="Open this run"
+                  >
+                    <StatusBadge status={j.status} />
+                    <span className="text-sm truncate flex-1">{runTitle(j)}</span>
+                    <span className="text-[11px] text-muted shrink-0">
+                      {fmtTokens((j.inputTokens || 0) + (j.outputTokens || 0))} tok · {fmtCost(j.costUsd)}
+                    </span>
+                    <span className="text-[11px] text-muted shrink-0 w-16 text-right">{timeAgo(j.startedAt)}</span>
+                  </button>
+                ))}
+              </div>
+            </section>
+          ) : (
+            <p className="text-sm text-muted">
+              No agent has run in this project yet.{" "}
+              <button onClick={onGoRun} className="text-accent underline">
+                Run an agent
+              </button>
+            </p>
+          )}
+          {project.exists && <CheckpointsPanel projectId={projectId} onRestore={onReload} />}
+        </div>
+      )}
     </div>
   );
+}
 
-  // Two bands: what the project is beside where it's up to and what has happened in it, then how
-  // it fits together (one diagram, full width).
+/** Architecture and Flowchart before the project has been mapped. */
+function NoMapYet({ onGoMap }: { onGoMap: () => void }) {
   return (
-    <div className="space-y-7">
-      {assessment ? (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 xl:gap-6 items-start">
-          <div className="min-w-0">
-            <AssessmentSummary a={assessment} onGoMap={onGoMap} />
-          </div>
-          {facts}
-        </div>
-      ) : (
-        facts
-      )}
-
-      {assessment && <ProjectDiagram assessment={assessment} />}
-
+    <div className="rounded-xl border border-border bg-panel p-5 text-sm text-muted max-w-2xl">
+      Protégé hasn&apos;t mapped this project yet, so there&apos;s no architecture or flowchart to show.{" "}
+      <button onClick={onGoMap} className="text-accent underline">
+        Map it on the Map tab
+      </button>
+      .
     </div>
   );
 }
@@ -463,11 +575,11 @@ function AssessmentSummary({ a, onGoMap }: { a: Assessment; onGoMap: () => void 
       <div className="flex items-start justify-between gap-3 mb-2">
         <div className="min-w-0">
           <div className="flex items-center gap-2 mb-0.5">
-            <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded-full border border-accent/30 bg-accent/10 text-accent font-semibold">
+            <span className="text-[11px] uppercase tracking-wide px-1.5 py-0.5 rounded-full border border-accent/30 bg-accent/10 text-accent font-semibold">
               ✦ {a.phase}
             </span>
             {a.stack?.slice(0, 4).map((s, i) => (
-              <span key={i} className="text-[10px] text-muted">
+              <span key={i} className="text-[11px] text-muted">
                 {s}
                 {i < Math.min(3, a.stack.length - 1) ? " ·" : ""}
               </span>
@@ -563,7 +675,7 @@ function DocumentsList({ projectId, documents, onChanged }: { projectId: string;
           {documents.map((d) => (
             <div key={d.file}>
               <button onClick={() => setOpen(open === d.file ? null : d.file)} className="w-full text-left flex items-center gap-3 px-4 py-2.5 hover:bg-panel-2">
-                <span className="text-[10px] text-muted w-3">{open === d.file ? "▾" : "▸"}</span>
+                <span className="text-[11px] text-muted w-3">{open === d.file ? "▾" : "▸"}</span>
                 <span className="min-w-0 flex-1">
                   <span className="text-sm">{d.title}</span> <span className="text-[11px] text-muted font-mono">{d.file}</span>
                   {d.lastBy && <span className="block text-[11.5px] text-muted truncate">Latest: {d.lastBy}</span>}
@@ -672,7 +784,7 @@ function Sessions({
                   <span className="text-muted text-xs shrink-0">{open === s.sessionId ? "▾" : "▸"}</span>
                   <span className="text-sm truncate">{s.summary}</span>
                   {active && (
-                    <span className="live-dot inline-flex items-center gap-1 text-[10px] text-good shrink-0">
+                    <span className="live-dot inline-flex items-center gap-1 text-[11px] text-good shrink-0">
                       <span className="w-1.5 h-1.5 rounded-full bg-good" /> active
                     </span>
                   )}
@@ -861,7 +973,7 @@ function SessionTranscript({
           {active && (
             <button
               onClick={() => setLive((v) => !v)}
-              className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border text-[10px] ${
+              className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border text-[11px] ${
                 live ? "border-good/40 text-good" : "border-border text-muted"
               }`}
               title={live ? "Live updating — click to pause" : "Paused — click to resume live updates"}
@@ -901,12 +1013,12 @@ function TranscriptMessage({ m }: { m: TxMsg }) {
     >
       <div className="flex items-center gap-2 mb-1.5">
         <span
-          className="text-[10px] font-medium px-1.5 py-0.5 rounded"
+          className="text-[11px] font-medium px-1.5 py-0.5 rounded"
           style={{ background: cat.color + "22", color: cat.color }}
         >
           {cat.label}
         </span>
-        <span className="text-[10px] uppercase tracking-wide text-muted/60">{m.role}</span>
+        <span className="text-[11px] uppercase tracking-wide text-muted/60">{m.role}</span>
       </div>
       <div className="space-y-1.5">
         {m.blocks.map((b, i) => (

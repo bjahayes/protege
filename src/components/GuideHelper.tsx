@@ -76,7 +76,8 @@ export default function GuideHelper() {
   const answerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setOpen(localStorage.getItem("protege_guide_collapsed") !== "1");
+    // Starts as a small "Protégé" button: opened only when the person asks, so it never covers the page.
+    setOpen(localStorage.getItem("protege_guide_collapsed") === "0");
     setDemo(localStorage.getItem("protege_demo") === "1");
     setReady(true);
   }, []);
@@ -227,9 +228,10 @@ function ReopenPill({ onClick }: { onClick: () => void }) {
   return (
     <button
       onClick={onClick}
+      title="Questions about using Protégé"
       className="fixed bottom-4 right-4 z-40 rounded-full border border-accent/30 bg-panel shadow-xl px-3 py-2 text-sm text-accent hover:bg-accent/10 flex items-center gap-1.5"
     >
-      <span>✦</span> Protégé
+      <span>✦</span> Help
     </button>
   );
 }

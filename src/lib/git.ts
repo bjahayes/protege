@@ -154,7 +154,30 @@ export async function createWorktree(repo: string, jobId: string): Promise<Workt
  * Stage and commit everything the agent changed in the worktree so the work is
  * captured on the branch. Returns true if a commit was made.
  */
-export async function commitWorktree(worktreePath: string, message: string): Promise<boolean> {
+/**
+ * Git work on one safe copy runs one thing at a time. When a run ends, its changes are committed
+ * while the review, and the panel's story of what changed, read them. Run together, git's index
+ * lock makes one of them fail, so a commit could be missed (and Keep would lose the change) or a
+ * read could come back empty ("it didn't change anything").
+ */
+const gq = globalThis as unknown as { __protegeGitQueues?: Map<string, Promise<unknown>> };
+const gitQueues = (gq.__protegeGitQueues ||= new Map());
+function onePerCopy<T>(dir: string, fn: () => Promise<T>): Promise<T> {
+  const key = path.resolve(dir).toLowerCase();
+  const run = (gitQueues.get(key) || Promise.resolve()).catch(() => {}).then(fn);
+  const tail = run.catch(() => {});
+  gitQueues.set(key, tail);
+  tail.then(() => {
+    if (gitQueues.get(key) === tail) gitQueues.delete(key);
+  });
+  return run;
+}
+
+export function commitWorktree(worktreePath: string, message: string): Promise<boolean> {
+  return onePerCopy(worktreePath, () => commitNow(worktreePath, message));
+}
+
+async function commitNow(worktreePath: string, message: string): Promise<boolean> {
   try {
     await git(worktreePath, ["add", "-A"]);
     const { stdout } = await git(worktreePath, ["status", "--porcelain"]);
@@ -195,16 +218,31 @@ function parseNumstat(numstat: string, nameStatus: string): DiffFile[] {
   return files;
 }
 
-/** Diff between the worktree branch tip and the base it was created from. */
-export async function worktreeDiff(handle: {
-  worktreePath: string;
-  branch?: string;
-  baseRef?: string;
-}): Promise<JobDiff> {
+/**
+ * Diff between the worktree branch tip and the base it was created from. `context` is the lines
+ * of unchanged code around each edit (git's default is 3; fewer keeps nearby edits apart).
+ */
+export async function worktreeDiff(
+  handle: {
+    worktreePath: string;
+    branch?: string;
+    baseRef?: string;
+  },
+  opts: { context?: number } = {}
+): Promise<JobDiff> {
   const { worktreePath, branch, baseRef } = handle;
   if (!worktreePath || !fs.existsSync(worktreePath)) {
     return { available: false, reason: "Worktree no longer exists", files: [], totalAdditions: 0, totalDeletions: 0 };
   }
+  return onePerCopy(worktreePath, () => diffNow(worktreePath, branch, baseRef, opts));
+}
+
+async function diffNow(
+  worktreePath: string,
+  branch: string | undefined,
+  baseRef: string | undefined,
+  opts: { context?: number }
+): Promise<JobDiff> {
   const base = baseRef || (await headRef(worktreePath));
   if (!base) {
     return { available: false, reason: "No base ref", files: [], totalAdditions: 0, totalDeletions: 0 };
@@ -219,7 +257,8 @@ export async function worktreeDiff(handle: {
     // Fetch per-file patches (bounded).
     for (const f of files.slice(0, 60)) {
       try {
-        const { stdout } = await git(worktreePath, ["diff", range, "--", f.path]);
+        const ctx = opts.context != null ? [`--unified=${opts.context}`] : [];
+        const { stdout } = await git(worktreePath, ["diff", ...ctx, range, "--", f.path]);
         f.patch = stdout.length > 40000 ? stdout.slice(0, 40000) + "\n… (truncated)" : stdout;
       } catch {
         f.patch = "";
@@ -274,7 +313,18 @@ export async function applyWorktree(
   }
   try {
     const { stdout } = await git(repo, [...(await identity(repo)), "merge", "--no-edit", branch]);
-    if (opts.worktreePath && fs.existsSync(opts.worktreePath)) copyNotes(opts.worktreePath, repo);
+    // The change is in now. Copying the notes back can hit a file Windows briefly holds open;
+    // try again, and never report a merge that happened as one that failed (or abort it).
+    if (opts.worktreePath && fs.existsSync(opts.worktreePath)) {
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          copyNotes(opts.worktreePath, repo);
+          break;
+        } catch {
+          if (attempt < 3) await new Promise((r) => setTimeout(r, 300 * attempt));
+        }
+      }
+    }
     return { ok: true, message: stdout.trim() || `Merged ${branch}.` };
   } catch (e: any) {
     const msg = String(e?.stderr || e?.stdout || e?.message || "merge failed");

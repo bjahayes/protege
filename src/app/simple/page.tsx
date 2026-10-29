@@ -140,7 +140,7 @@ export default function SimpleHome() {
                 <div className="flex items-center gap-2">
                   <h3 className="font-semibold text-base">{p.name}</h3>
                   {active && (
-                    <span className="live-dot inline-flex items-center gap-1 text-[10px] text-good font-medium">
+                    <span className="live-dot inline-flex items-center gap-1 text-[11px] text-good font-medium">
                       <span className="w-1.5 h-1.5 rounded-full bg-good" /> {p.liveAgents > 0 ? "Protégé working" : "active"}
                     </span>
                   )}

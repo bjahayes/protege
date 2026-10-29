@@ -99,7 +99,7 @@ export default function SidebarNav() {
             {inboxCount > 0 && <Badge n={inboxCount} warn />}
           </span>
         )}
-        <span className={`${shown || !(liveCount || inboxCount) ? "ml-auto" : ""} text-[10px] opacity-60`}>{shown ? "▾" : "▸"}</span>
+        <span className={`${shown || !(liveCount || inboxCount) ? "ml-auto" : ""} text-[11px] opacity-60`}>{shown ? "▾" : "▸"}</span>
       </button>
       {shown && (
         <div className="ml-3 pl-2 border-l border-border flex flex-col gap-0.5">

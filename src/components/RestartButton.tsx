@@ -43,6 +43,16 @@ export default function RestartButton() {
       <div className="text-[11px] text-muted px-1 leading-snug">
         New version built. Restarting once {s.waitingFor?.length ? s.waitingFor.join(", ") : "nothing is running"}{" "}
         {s.waitingFor && s.waitingFor.length > 1 ? "finish" : "finishes"}.{" "}
+        <button
+          onClick={() => {
+            if (confirm(`Restart now? ${s.waitingFor?.length ? `This stops ${s.waitingFor.join(", ")} partway; it` : "Anything running"} carries on from its saved history.`))
+              post({ action: "force" });
+          }}
+          className="underline hover:text-text"
+        >
+          Restart now
+        </button>{" "}
+        ·{" "}
         <button onClick={() => post({ action: "cancel" })} className="underline hover:text-text">
           Cancel
         </button>

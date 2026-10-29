@@ -22,7 +22,8 @@
     "lint": "next lint",
     "test:diagram": "node --experimental-strip-types --no-warnings scripts/test-wire-route.ts",
     "test:keep": "node --experimental-strip-types --no-warnings scripts/test-keep.ts",
-    "test": "npm run test:diagram && npm run test:keep",
+    "test:panel": "node --experimental-strip-types --no-warnings --import ./scripts/ts-resolve.mjs scripts/test-context-panel.ts",
+    "test": "npm run test:diagram && npm run test:keep && npm run test:panel",
     "restart": "node scripts/restart.mjs"
   },
   "dependencies": {
@@ -44,6 +45,7 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "autoprefixer": "^10.4.20",
+    "playwright-core": "^1.56.1",
     "postcss": "^8.5.1",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.7.3"

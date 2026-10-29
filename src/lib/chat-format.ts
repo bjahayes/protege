@@ -2,8 +2,9 @@
 // The same function reads a saved session transcript and the live messages of a running chat,
 // so a conversation looks the same whether it was opened from history or watched live.
 
-export type ChatItem =
-  | { id: string; kind: "user"; text: string; images?: string[]; files?: string[] }
+/** `ts`: when it happened (from the saved transcript, or when a live item arrived), for the replay strip. */
+export type ChatItem = (
+  | { id: string; kind: "user"; text: string; images?: string[]; files?: string[]; midTurn?: boolean }
   | { id: string; kind: "text"; text: string }
   | { id: string; kind: "thinking"; text: string }
   | { id: string; kind: "tool"; toolUseId: string; name: string; input: any }
@@ -33,7 +34,8 @@ export type ChatItem =
       canAlways?: boolean;
     }
   | { id: string; kind: "permission_done"; requestId: string; decision: "allow" | "always" | "deny" }
-  | { id: string; kind: "error"; text: string };
+  | { id: string; kind: "error"; text: string }
+) & { ts?: number };
 
 const TEXT_CAP = 20_000;
 
@@ -102,7 +104,8 @@ function cleanUserText(raw: string): { kind: "user" | "command" | "skip" | "stop
     const args = s.match(/<command-args>([\s\S]*?)<\/command-args>/)?.[1]?.trim();
     return { kind: "command", text: `${cmd[1].trim()}${args ? " " + args : ""}` };
   }
-  if (/^\s*<(local-command-stdout|local-command-caveat|bash-stdout|bash-stderr)>/.test(s)) return { kind: "skip", text: "" };
+  // Claude Code's own notices (a command's output, a background task finishing) aren't the person's words.
+  if (/^\s*<(local-command-stdout|local-command-caveat|bash-stdout|bash-stderr|task-notification)>/.test(s)) return { kind: "skip", text: "" };
   s = s.replace(/<system-reminder>[\s\S]*?<\/system-reminder>/g, "").trim();
   if (!s) return { kind: "skip", text: "" };
   return { kind: "user", text: s };
@@ -114,6 +117,12 @@ function cleanUserText(raw: string): { kind: "user" | "command" | "skip" | "stop
  * own tool call and its final report already show in the main conversation.
  */
 export function itemsFromMessage(m: any): ChatItem[] {
+  const out = itemsOf(m);
+  const ts = m?.timestamp ? Date.parse(m.timestamp) : NaN;
+  return Number.isFinite(ts) ? out.map((i) => ({ ...i, ts })) : out;
+}
+
+function itemsOf(m: any): ChatItem[] {
   if (!m || m.parent_tool_use_id) return [];
   if (m.isMeta || m.isSynthetic) return [];
   const uuid: string = m.uuid || "";

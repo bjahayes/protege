@@ -6,6 +6,7 @@ import Link from "next/link";
 import type { ProjectSummary } from "@/lib/types";
 import type { Suggestion } from "@/lib/suggestions";
 import SimpleTask from "@/components/simple/SimpleTask";
+import type { Assessment } from "@/lib/assessment";
 
 // Approachable, plain-language building starters (this is a tool-building assistant, not legal work).
 const RECIPES = [
@@ -25,6 +26,8 @@ export default function SimpleDo() {
   const [busy, setBusy] = useState(false);
   const [runningJob, setRunningJob] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<Suggestion[] | null>(null);
+  const [assessment, setAssessment] = useState<Assessment | null>(null);
+  const [previewEntry, setPreviewEntry] = useState<string | null>(null);
 
   useEffect(() => {
     apiFetch("/api/projects", { cache: "no-store" })
@@ -49,8 +52,12 @@ export default function SimpleDo() {
       const r = await apiFetch(`/api/projects/${p.id}`, { cache: "no-store" });
       const j = await r.json();
       setGitRepo(!!j.gitRepo);
+      setAssessment(j.assessment || null);
+      setPreviewEntry(j.previewEntry || null);
     } catch {
       setGitRepo(false);
+      setAssessment(null);
+      setPreviewEntry(null);
     }
     apiFetch(`/api/projects/${p.id}/suggestions`, { cache: "no-store" })
       .then((r) => r.json())
@@ -83,7 +90,7 @@ export default function SimpleDo() {
   const filtered = projects.filter((p) => (query ? p.name.toLowerCase().includes(query.toLowerCase()) : true));
 
   return (
-    <div className="p-8 max-w-2xl mx-auto">
+    <div className={`p-8 mx-auto ${runningJob ? "max-w-3xl xl:max-w-[1440px]" : "max-w-2xl"}`}>
       <h1 className="text-2xl font-bold">Get Protégé to do something</h1>
       <p className="text-muted mt-1">Tell it what you&apos;d like in plain words. It does the work and shows you before keeping anything.</p>
 
@@ -151,7 +158,7 @@ export default function SimpleDo() {
                       >
                         <span className="text-muted shrink-0">💬</span>
                         <span className="flex-1">{s.text}</span>
-                        <span className="text-[10px] text-muted shrink-0">ask →</span>
+                        <span className="text-[11px] text-muted shrink-0">ask →</span>
                       </Link>
                     ) : (
                       <button
@@ -161,7 +168,7 @@ export default function SimpleDo() {
                       >
                         <span className="text-accent shrink-0">✍️</span>
                         <span className="flex-1">{s.text}</span>
-                        <span className="text-[10px] text-muted shrink-0">use this</span>
+                        <span className="text-[11px] text-muted shrink-0">use this</span>
                       </button>
                     )
                   )}
@@ -211,7 +218,14 @@ export default function SimpleDo() {
       {/* Step 3: run + review */}
       {runningJob && (
         <div className="mt-6">
-          <SimpleTask key={runningJob} projectId={picked?.id || ""} firstJobId={runningJob} gitRepo={gitRepo} />
+          <SimpleTask
+            key={runningJob}
+            projectId={picked?.id || ""}
+            firstJobId={runningJob}
+            gitRepo={gitRepo}
+            assessment={assessment}
+            previewEntry={previewEntry}
+          />
           <button
             onClick={() => {
               setRunningJob(null);

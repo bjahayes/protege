@@ -43,11 +43,11 @@ export default function SimplePreview({ params }: { params: Promise<{ id: string
   return (
     <div className="flex flex-col h-full">
       {/* Top bar */}
-      <div className="flex items-center gap-3 px-5 py-3 border-b border-border bg-panel/60">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-5 py-3 border-b border-border bg-panel/60">
         <Link href={`/simple/project/${id}`} className="text-accent text-sm hover:underline shrink-0">
           ← Back
         </Link>
-        <div className="font-semibold truncate">{name}</div>
+        <div className="font-semibold truncate min-w-0">{name}</div>
         <span className="text-[11px] text-good bg-good/10 border border-good/25 rounded px-1.5 py-0.5 shrink-0">
           Live preview
         </span>

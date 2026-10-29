@@ -35,13 +35,12 @@ export default function LiveStrip() {
     };
   }, []);
 
-  if (live === null) return null;
+  // Shown only while something is running: an empty "nothing is running" card is clutter.
+  if (!live?.length) return null;
   return (
     <div className="rounded-2xl border border-border bg-panel p-5">
       <div className="text-[15px] font-semibold">Being built right now</div>
-      {live.length === 0 ? (
-        <p className="text-sm text-muted mt-1">Nothing is running. Start a task from “Do a task” or a project page.</p>
-      ) : (
+      {(
         <div className="mt-3 flex flex-col divide-y divide-border">
           {live.map((j) => {
             const s = roughStage(j);
@@ -51,7 +50,7 @@ export default function LiveStrip() {
                   <div className="min-w-0">
                     <div className="text-[12px] text-muted">{j.projectName}</div>
                     <div className="text-sm font-semibold truncate">
-                      {j.kind === "assess" ? "Drawing a map of the project" : ownWords(j.prompt)}
+                      {j.kind === "assess" ? "Drawing a map of the project" : j.kind === "plan" ? `Planning: ${ownWords(j.prompt)}` : ownWords(j.prompt)}
                     </div>
                   </div>
                   <div className="text-[12px] text-accent">{j.status === "idle" ? "Waiting for you" : STAGES[s]}</div>

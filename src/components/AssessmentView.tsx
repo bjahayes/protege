@@ -232,7 +232,7 @@ function ComponentCard({ c }: { c: ComponentInfo }) {
           <div className="font-medium truncate">{c.name}</div>
           {c.path && <div className="text-[11px] text-muted font-mono truncate">{c.path}</div>}
         </div>
-        <span className={`shrink-0 text-[10px] px-1.5 py-0.5 rounded-full border ${style}`} title={st.means}>
+        <span className={`shrink-0 text-[11px] px-1.5 py-0.5 rounded-full border ${style}`} title={st.means}>
           {st.label}
         </span>
       </div>

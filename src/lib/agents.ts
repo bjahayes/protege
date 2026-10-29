@@ -343,6 +343,48 @@ export function runAgentLabel(j: { agentId?: string; agentName?: string; kind?: 
   return { name: "Your own instruction", emoji: "💬" };
 }
 
+/**
+ * A run's title for lists: the person's own words, or, for a run Protégé started itself (an agent,
+ * the project map, the plain summary, noting what was learned), what it was in plain words. Protégé's
+ * long instructions to Claude never show as a title.
+ */
+export function runTitle(j: { agentId?: string; agentName?: string; kind?: string; prompt: string }, agents: AgentDef[] = BUILT_IN_AGENTS): string {
+  const p = String(j.prompt || "").trimStart();
+  if (j.kind === "assess" || p.startsWith("You are performing a STRUCTURED PROJECT ASSESSMENT")) return "Drew a map of the project";
+  if (p.startsWith("Write a plain-English summary")) return "Wrote the plain-English summary";
+  if (p.startsWith("A task was just completed in this project")) return "Noted what was learned for next time";
+  if (p.startsWith("This is a brand-new project started from")) return "Shaped the new project";
+  const a = j.agentId ? agents.find((x) => x.id === j.agentId) : undefined;
+  // An agent that takes the person's words ("What should change?") is titled by them; one that doesn't, by its name.
+  const own = p.split("\n\n---\nIMPORTANT")[0].trim();
+  if (a && !a.input) return a.name;
+  if (a?.input) {
+    const [before, after] = a.instructions.split("{input}");
+    let t = own;
+    if (before.trim() && t.startsWith(before.trim())) {
+      t = t.slice(before.trim().length);
+      // Whatever follows the person's words (the rest of the template, rules for the agent's kind).
+      const tail = after?.trim() ? t.indexOf(after.trim().slice(0, 30)) : -1;
+      t = tail > 0 ? t.slice(0, tail) : t.split("\n\n")[0];
+    }
+    return t.trim() || a.name;
+  }
+  if (j.agentName && !own) return j.agentName;
+  return own || "(no instruction)";
+}
+
+/** Whether a Claude Code session's first message is one Protégé wrote, not the person. */
+export function isProtegePrompt(text: string | undefined): boolean {
+  const p = String(text || "").trimStart();
+  return (
+    p.startsWith("You are performing a STRUCTURED PROJECT ASSESSMENT") ||
+    p.startsWith("Write a plain-English summary of THIS project") ||
+    p.startsWith("A task was just completed in this project") ||
+    p.startsWith("This is a brand-new project started from") ||
+    BUILT_IN_AGENTS.some((a) => !a.input && a.instructions.length > 40 && p.startsWith(a.instructions.slice(0, 60)))
+  );
+}
+
 /** An agent's own task, without the rules Protégé adds for its kind (for making a copy of it). */
 export function taskOnly(a: AgentDef): string {
   const i = a.instructions;

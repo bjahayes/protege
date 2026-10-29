@@ -109,7 +109,34 @@ function toolDetail(name: string, input: any): Record<string, any> {
   if (typeof i.description === "string") d.description = i.description.slice(0, 160);
   if (typeof i.query === "string") d.query = i.query.slice(0, 160);
   if (typeof i.url === "string") d.url = i.url.slice(0, 200);
+  // Claude Code's to-do list (lib/todo-list.ts), so the panel can show it live.
+  if (name === "TodoWrite" && Array.isArray(i.todos))
+    d.todos = i.todos.slice(0, 40).map((t: any) => ({ content: String(t?.content || "").slice(0, 200), status: t?.status }));
+  if (name === "TaskCreate" && typeof i.subject === "string") d.subject = i.subject.slice(0, 200);
+  if (name === "TaskUpdate") {
+    if (i.taskId != null) d.taskId = String(i.taskId);
+    if (typeof i.status === "string") d.status = i.status;
+    if (typeof i.subject === "string") d.subject = i.subject.slice(0, 200);
+  }
   const lines = (s: any) => (typeof s === "string" && s.length ? s.split("\n").length : 0);
+  // The lines an edit really adds (not the unchanged ones around them), so a reader of the run (the
+  // to-do list's progress) can tell what each edit did.
+  const pairs: [string, string][] =
+    name === "MultiEdit" && Array.isArray(i.edits)
+      ? i.edits.map((e: any) => [String(e?.old_string ?? ""), String(e?.new_string ?? "")])
+      : name === "Write"
+        ? [["", String(i.content ?? "")]]
+        : name === "Edit"
+          ? [[String(i.old_string ?? ""), String(i.new_string ?? "")]]
+          : [];
+  if (pairs.length) {
+    const fresh: string[] = [];
+    for (const [o, n] of pairs) {
+      const had = new Set(o.split("\n").map((l) => l.trim()));
+      for (const l of n.split("\n")) if (l.trim() && !had.has(l.trim()) && fresh.length < 3) fresh.push(l.trim().slice(0, 120));
+    }
+    if (fresh.length) d.preview = fresh.join(" ⏎ ");
+  }
   if (name === "Write") {
     d.added = lines(i.content);
     d.created = true;
@@ -430,12 +457,14 @@ class JobManager {
       }
     }
 
-    // Prime with an orientation so the agent starts warm (only for fresh, non-assessment runs).
-    let systemPrompt: string | undefined;
+    // Prime with an orientation so the agent starts warm (only for fresh, non-assessment runs). It is
+    // added to Claude Code's own system prompt, not put in its place: a plain string would replace
+    // Claude Code's instructions (how to work, when to keep a to-do list) with the orientation alone.
+    let systemPrompt: string | { type: "preset"; preset: "claude_code"; append: string } | undefined;
     if (opts.primeContext && opts.kind !== "assess" && !opts.resume) {
       try {
         const ctx = buildLaunchContext(opts.projectPath);
-        if (ctx) systemPrompt = ctx;
+        if (ctx) systemPrompt = { type: "preset", preset: "claude_code", append: ctx };
       } catch {
         /* ignore */
       }
@@ -535,7 +564,7 @@ class JobManager {
     }
   }
 
-  async getDiff(id: string): Promise<JobDiff> {
+  async getDiff(id: string, opts: { context?: number } = {}): Promise<JobDiff> {
     const job = this.get(id);
     if (!job || !job.worktreePath) {
       return { available: false, reason: "No worktree for this job", files: [], totalAdditions: 0, totalDeletions: 0 };
@@ -543,7 +572,7 @@ class JobManager {
     if (job.worktreeState === "discarded") {
       return { available: false, reason: "Worktree was discarded", files: [], totalAdditions: 0, totalDeletions: 0 };
     }
-    return worktreeDiff({ worktreePath: job.worktreePath, branch: job.branch, baseRef: job.baseRef });
+    return worktreeDiff({ worktreePath: job.worktreePath, branch: job.branch, baseRef: job.baseRef }, opts);
   }
 
   async applyJob(id: string, opts: { saveFirst?: boolean } = {}) {
@@ -634,7 +663,7 @@ class JobManager {
       case "user": {
         for (const block of msg.message?.content ?? []) {
           if (block.type === "tool_result") {
-            this.emit(job, "tool_result", { text: summarize(block.content) });
+            this.emit(job, "tool_result", { text: summarize(block.content), ...(block.is_error === true ? { isError: true } : {}) });
           }
         }
         break;

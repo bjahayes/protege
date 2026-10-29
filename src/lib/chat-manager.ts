@@ -251,8 +251,10 @@ class ChatManager {
     const content = blocks.length ? [...blocks, ...(text ? [{ type: "text", text }] : [])] : text;
     const msg = { type: "user", uuid, session_id: sessionId, parent_tool_use_id: null, message: { role: "user", content } };
     c.inbox.push(msg as SDKUserMessage);
-    // Shown the same way the saved transcript will show it.
-    this.emitItems(c, itemsFromMessage(msg));
+    // Shown the same way the saved transcript will show it. A message sent while Claude is working
+    // is marked, so the panel keeps it in the turn in progress rather than starting a new one.
+    const working = c.status === "working" || c.status === "waiting";
+    this.emitItems(c, itemsFromMessage(msg).map((i) => (working && i.kind === "user" ? { ...i, midTurn: true } : i)));
     this.setStatus(c, "working");
     return true;
   }
@@ -469,7 +471,8 @@ class ChatManager {
   }
 
   private emitItems(c: LiveChat, items: ChatItem[]) {
-    if (items.length) this.emit(c, { type: "items", items });
+    const now = Date.now();
+    if (items.length) this.emit(c, { type: "items", items: items.map((i) => (i.ts ? i : { ...i, ts: now })) });
   }
 
   private emitState(c: LiveChat) {

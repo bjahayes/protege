@@ -9,11 +9,13 @@ import { readAssessment } from "./assessment";
 import { getJobManager } from "./job-manager";
 import { knownFolders } from "./known-folders";
 import type { ProjectSummary, SessionInfo } from "./types";
+import { isProtegePrompt } from "./agents";
 
 interface CwdAgg {
   count: number;
   last: number;
   summary?: string;
+  summaryAt?: number;
   branch?: string;
 }
 
@@ -49,8 +51,13 @@ export async function discoverProjects(): Promise<ProjectSummary[]> {
     e.count++;
     if ((s.lastModified ?? 0) >= e.last) {
       e.last = s.lastModified ?? 0;
-      e.summary = s.customTitle || s.summary || s.firstPrompt;
       e.branch = s.gitBranch;
+    }
+    // The card's line is the latest session the person started (Protégé's own runs are named elsewhere).
+    const title = s.customTitle || s.summary || s.firstPrompt;
+    if (!isProtegePrompt(s.firstPrompt) && !isProtegePrompt(title) && (s.lastModified ?? 0) >= (e.summaryAt ?? 0)) {
+      e.summary = title;
+      e.summaryAt = s.lastModified ?? 0;
     }
     byCwd.set(cwd, e);
   }

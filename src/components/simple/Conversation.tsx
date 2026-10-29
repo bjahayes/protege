@@ -6,6 +6,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Job, JobEvent } from "@/lib/types";
 import { ownWords, stepLabel } from "@/lib/live-build";
+import { stripPlan } from "@/lib/plan";
 import { plainError } from "@/lib/plain";
 import MarkdownView from "../MarkdownView";
 
@@ -26,6 +27,14 @@ function detailOf(e: JobEvent): string | undefined {
   return d.command || d.file || d.pattern || d.query || d.url || e.payload?.input || undefined;
 }
 
+/** The run's result repeats its last reply with the spacing squashed (and cut short when long). */
+function sameReply(result: string, lastText: string): boolean {
+  const flat = (s: string) => stripPlan(s).replace(/\s+/g, " ").trim();
+  const r = flat(result).replace(/…$/, "");
+  const t = flat(lastText);
+  return !!r && (t === r || t.startsWith(r));
+}
+
 function itemsFor(feed: FeedState, fi: number): Item[] {
   const out: Item[] = [];
   if (feed.job) out.push({ kind: "you", text: ownWords(feed.job.prompt), key: `${fi}-you` });
@@ -44,7 +53,8 @@ function itemsFor(feed: FeedState, fi: number): Item[] {
           break;
         }
         flush(k + "s");
-        lastText = e.payload?.text || "";
+        // A plan's parts block is for the map, not the chat.
+        lastText = stripPlan(e.payload?.text || "");
         if (lastText) out.push({ kind: "claude", text: lastText, key: k });
         break;
       case "tool":
@@ -71,8 +81,8 @@ function itemsFor(feed: FeedState, fi: number): Item[] {
         if (e.payload?.isError) {
           const msg = String(e.payload?.result || e.payload?.subtype || "");
           out.push({ kind: "error", text: msg || "Something went wrong.", key: k });
-        } else if (e.payload?.result && e.payload.result.trim() !== lastText.trim() && e.payload?.subtype === "success") {
-          out.push({ kind: "claude", text: e.payload.result, key: k });
+        } else if (e.payload?.result && !sameReply(e.payload.result, lastText) && e.payload?.subtype === "success") {
+          out.push({ kind: "claude", text: stripPlan(e.payload.result), key: k });
         }
         break;
       case "error":
