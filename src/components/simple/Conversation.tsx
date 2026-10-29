@@ -166,8 +166,8 @@ export default function Conversation({ feeds }: { feeds: FeedState[] }) {
         )
       )}
       {live && (
-        <div className="flex items-center gap-2 text-[12.5px] text-accent pl-2">
-          <span className="w-1.5 h-1.5 rounded-full bg-accent live-dot" />
+        <div className="flex items-center gap-2 text-[12.5px] text-running pl-2">
+          <span className="w-1.5 h-1.5 rounded-full bg-running live-dot" />
           {lastStep ? `Working: ${stepLabel(lastStep)}` : "Getting started"}
         </div>
       )}

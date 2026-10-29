@@ -51,7 +51,7 @@ export default function ReplayStrip({
   return (
     <div>
       <div className="flex items-baseline justify-between gap-3 text-[12px] mb-1.5">
-        <span className={live ? "text-accent font-semibold" : "text-text/90 font-medium"}>{stage}</span>
+        <span className={live ? "text-running font-semibold" : "text-text/90 font-medium"}>{stage}</span>
         {/* Live: time since it started. Afterwards: the time it spent working, without long idle gaps. */}
         <span className="text-muted tabular-nums shrink-0">{plainDuration(live ? end - startedAt : workingTime(segs))}</span>
       </div>

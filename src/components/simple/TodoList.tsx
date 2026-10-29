@@ -121,19 +121,19 @@ export default function TodoList({
             <li
               key={t.id}
               title={plain[t.text] && plain[t.text] !== t.text ? `In Claude's words: ${t.text}` : undefined}
-              className={`flex items-start gap-2.5 rounded-lg px-2 py-1.5 text-[13px] leading-snug ${now ? "bg-accent/10 border border-accent/30" : "border border-transparent"}`}
+              className={`flex items-start gap-2.5 rounded-lg px-2 py-1.5 text-[13px] leading-snug ${now ? "bg-running/10 border border-running/30" : "border border-transparent"}`}
             >
               <span
                 aria-label={fin ? "Done" : now ? "Doing now" : "To do"}
                 className={`shrink-0 mt-px w-4 h-4 rounded-full flex items-center justify-center text-[11px] ${
-                  fin ? "bg-good/20 text-good" : now ? `border-2 border-accent ${live ? "live-dot" : ""}` : "border border-border"
+                  fin ? "bg-good/20 text-good" : now ? `border-2 border-running ${live ? "live-dot" : ""}` : "border border-border"
                 }`}
               >
                 {fin ? "✓" : ""}
               </span>
               <span className={fin ? "text-muted" : now ? "text-text font-medium" : "text-text/85"}>
                 {words}
-                {now && live && <span className="block text-[11px] text-accent font-normal mt-0.5">Doing this now</span>}
+                {now && live && <span className="block text-[11px] text-running font-normal mt-0.5">Doing this now</span>}
               </span>
             </li>
           );

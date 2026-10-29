@@ -311,7 +311,7 @@ export default function RunForm({ projectId, gitRepo, resume, onClearResume, onL
         }
         :global(.protege-select:focus) {
           outline: none;
-          border-color: rgba(91, 157, 255, 0.6);
+          border-color: rgb(var(--c-accent) / 0.6);
         }
       `}</style>
     </div>

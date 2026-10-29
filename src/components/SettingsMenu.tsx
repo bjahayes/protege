@@ -169,7 +169,7 @@ export default function SettingsMenu({ simple }: { simple: boolean }) {
               </p>
               <div className="px-5 pt-2 pb-4">
                 <Row title="Look" control={<ThemeToggle />}>
-                  Classic is Protégé’s original dark look. Midnight is near-black, with light-edged cards and rounder controls. Kept in this
+                  Classic is Protégé’s original dark look. Midnight is near-black, with rounder controls. Paper is light: warm paper, serif headings and square edges. Kept in this
                   browser.
                 </Row>
                 <Row title="Explanations" control={<ExplainStyleToggle />}>

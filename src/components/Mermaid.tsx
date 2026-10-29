@@ -9,16 +9,19 @@ let themedFor = "";
 function themeVars() {
   const css = getComputedStyle(document.documentElement);
   const v = (name: string) => css.getPropertyValue(name).trim();
-  const midnight = document.documentElement.dataset.theme === "midnight";
+  const look = document.documentElement.dataset.theme || "classic";
+  const midnight = look === "midnight";
+  const paper = look === "paper";
   return {
-    key: midnight ? "midnight" : "classic",
+    key: look,
+    light: paper,
     vars: {
       background: v("--panel"),
       primaryColor: v("--panel-2"),
-      primaryBorderColor: midnight ? v("--edge") : v("--accent"),
+      primaryBorderColor: midnight ? v("--edge") : paper ? v("--text") : v("--accent"),
       primaryTextColor: v("--text"),
       lineColor: v("--muted"),
-      fontFamily: midnight ? "Geist, Inter, system-ui, sans-serif" : "ui-sans-serif, system-ui, sans-serif",
+      fontFamily: midnight ? "Geist, Inter, system-ui, sans-serif" : paper ? "'Source Sans 3', system-ui, sans-serif" : "ui-sans-serif, system-ui, sans-serif",
       fontSize: "13px",
     },
   };
@@ -29,7 +32,7 @@ async function getMermaid() {
   const mermaid = await mermaidPromise;
   const t = themeVars();
   if (themedFor !== t.key) {
-    mermaid.initialize({ startOnLoad: false, theme: "dark", securityLevel: "strict", themeVariables: t.vars });
+    mermaid.initialize({ startOnLoad: false, theme: t.light ? "base" : "dark", securityLevel: "strict", themeVariables: t.vars });
     themedFor = t.key;
   }
   return mermaid;

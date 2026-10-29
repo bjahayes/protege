@@ -18,13 +18,15 @@
   --good: rgb(var(--c-good)); --warn: rgb(var(--c-warn)); --bad: rgb(var(--c-bad)); --running: rgb(var(--c-running));
   --text-2: #cfd5df; --strong: #f2f4f7; --code-bg: #11151c; --scroll: #2b3340;
   --font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --brand: #8ea4ff;
 }
 /* Midnight: blue-black surfaces rather than neutral grey, card edges in a cool slate rather than white
    (white edges on every card made pages read as black-and-white line drawings), section labels and
-   quieter text tinted blue, and "in progress" in violet so it stands apart from the blue of links. */
+   quieter text tinted blue, and whatever is happening now (running, being changed, the step under way) in the
+   logo's lilac, so it stands apart from the blue of links and the current page. */
 [data-theme="midnight"] {
   --c-bg: 6 8 13; --c-panel: 12 16 25; --c-panel-2: 19 25 38; --c-border: 33 41 58; --c-muted: 150 162 184;
-  --c-text: 255 255 255; --c-accent: 0 173 228; --c-good: 111 210 154; --c-warn: 231 184 90; --c-bad: 242 131 127; --c-running: 158 146 255;
+  --c-text: 255 255 255; --c-accent: 0 173 228; --c-good: 111 210 154; --c-warn: 231 184 90; --c-bad: 242 131 127; --c-running: 142 164 255;
   --text-2: #c9d0dd; --strong: #ffffff; --code-bg: #0b1019; --scroll: #2c3548;
   --edge: #3f5272; --accent-ink: #5fd0f3; --label: #8fb0d6;
   --font-ui: var(--font-geist), "Inter", system-ui, sans-serif;
@@ -42,14 +44,14 @@ body {
   font-family: var(--font-ui);
 }
 
-/* The Protégé name: spaced capitals in periwinkle with a bar on the left, the same in both looks. */
+/* The Protégé name: spaced capitals in lilac with a bar on the left, in every look (Paper uses a deeper lilac). */
 .brand-mark {
   display: block;
   font: 600 13.5px/1.2 var(--font-brand), system-ui, sans-serif;
   letter-spacing: 0.28em;
   text-transform: uppercase;
-  color: #8ea4ff;
-  border-left: 3px solid #8ea4ff;
+  color: var(--brand);
+  border-left: 3px solid var(--brand);
   padding-left: 12px;
   margin-left: -8px;
 }
@@ -122,8 +124,8 @@ body {
 @keyframes protege-flow { to { stroke-dashoffset: -11; } }
 .protege-wire-hot { stroke-dasharray: 6 5; animation: protege-flow 1s linear infinite; }
 @keyframes protege-glow {
-  0%, 100% { box-shadow: 0 0 0 3px rgba(91, 157, 255, 0.25); }
-  50% { box-shadow: 0 0 0 6px rgba(91, 157, 255, 0.08); }
+  0%, 100% { box-shadow: 0 0 0 3px rgb(var(--c-running) / 0.25); }
+  50% { box-shadow: 0 0 0 6px rgb(var(--c-running) / 0.08); }
 }
 .protege-glow { animation: protege-glow 1.6s ease-in-out infinite; }
 .protege-wire-label { paint-order: stroke; stroke: var(--panel); stroke-width: 4px; stroke-linejoin: round; }
@@ -151,7 +153,9 @@ body {
 [data-theme="midnight"] .rounded-xl.bg-panel.border, [data-theme="midnight"] .rounded-2xl.bg-panel.border { border-color: var(--edge); }
 [data-theme="midnight"] .shadow, [data-theme="midnight"] .shadow-lg, [data-theme="midnight"] .shadow-xl, [data-theme="midnight"] .shadow-2xl { box-shadow: none; }
 /* action buttons (the blue-tinted ones): pills, light blue text */
-[data-theme="midnight"] :is(button, a)[class*="bg-accent/"][class*="border-accent/"] { border-radius: 800px; color: var(--accent-ink); }
+/* Tinted blue buttons become pills. Only small controls: a class's own border-accent/ (not hover:border-accent/),
+   and never cards (rounded-xl / rounded-2xl), which once turned the parts-map cards into ovals. */
+[data-theme="midnight"] :is(button, a):is([class^="border-accent/"], [class*=" border-accent/"])[class*="bg-accent/"]:not(.rounded-xl, .rounded-2xl) { border-radius: 800px; color: var(--accent-ink); }
 /* secondary actions marked btn-alt: the same blue tint as the action buttons */
 [data-theme="midnight"] .btn-alt { background: rgb(var(--c-accent) / 0.09); border-color: rgb(var(--c-accent) / 0.5); color: var(--accent-ink); border-radius: 800px; }
 [data-theme="midnight"] .btn-alt:hover { background: rgb(var(--c-accent) / 0.16); color: #ffffff; }
@@ -164,3 +168,45 @@ body {
 [data-theme="midnight"] aside nav a.bg-panel-2 { color: var(--accent); }
 [data-theme="midnight"] .nav-badge-warn { color: var(--accent) !important; }
 [data-theme="midnight"] .nav-badge-warn > span { background: var(--accent) !important; }
+
+/* ---------- Paper: the light look ----------
+   Warm paper, white sheets, thin warm rules, square edges, Newsreader serif for headings and reading
+   text, Source Sans 3 for controls, one deep red for links and the current item, ink-black main
+   buttons, and a deeper lilac for whatever is happening now. */
+[data-theme="paper"] {
+  color-scheme: light;
+  --c-bg: 251 250 246; --c-panel: 255 255 255; --c-panel-2: 243 240 232; --c-border: 222 216 204; --c-muted: 112 107 97;
+  --c-text: 34 32 28; --c-accent: 138 44 31; --c-good: 52 110 58; --c-warn: 150 100 14; --c-bad: 168 48 30; --c-running: 84 104 214;
+  --text-2: #4d4a43; --strong: #22201c; --code-bg: #f3f0e8; --scroll: #d5cec0;
+  --brand: #5468d6; --label: #8a2c1f; --ink: #22201c;
+  --font-ui: var(--font-source-sans), "Source Sans 3", system-ui, sans-serif;
+  --font-display: var(--font-newsreader), Georgia, serif;
+}
+[data-theme="paper"] body { font-size: 15px; }
+[data-theme="paper"] main h1 { font-family: var(--font-display); font-weight: 500; letter-spacing: -0.01em; }
+[data-theme="paper"] main h1.text-2xl, [data-theme="paper"] main h1.text-xl { font-size: clamp(28px, 2.4vw, 36px); }
+[data-theme="paper"] main h2.text-sm, [data-theme="paper"] main h3.text-sm { text-transform: uppercase; letter-spacing: 0.12em; font-size: 12px; font-weight: 600; color: var(--label); }
+/* reading text in the serif */
+[data-theme="paper"] .prose-bw, [data-theme="paper"] .tx-md { font-family: var(--font-display); font-size: 16px; line-height: 1.65; }
+[data-theme="paper"] :is(.prose-bw, .tx-md) :is(code, pre) { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+/* square edges; dots and status pills stay round */
+[data-theme="paper"] :is(.rounded, .rounded-md, .rounded-lg, .rounded-xl, .rounded-2xl) { border-radius: 0; }
+[data-theme="paper"] :is(.shadow, .shadow-lg, .shadow-xl) { box-shadow: 0 1px 2px rgb(34 32 28 / 0.06); }
+/* buttons: the one main action is ink-black; tinted secondary buttons are ink outlines */
+[data-theme="paper"] .btn-main { background: var(--ink) !important; color: #fbfaf6 !important; border-color: var(--ink) !important; }
+[data-theme="paper"] .btn-main:hover { background: #3a3732 !important; }
+[data-theme="paper"] .btn-main:disabled { opacity: 0.45; }
+[data-theme="paper"] .btn-alt,
+[data-theme="paper"] :is(button, a):is([class^="border-accent/"], [class*=" border-accent/"])[class*="bg-accent/"]:not(.rounded-xl, .rounded-2xl) {
+  background: transparent; border-color: var(--ink); color: var(--ink);
+}
+[data-theme="paper"] .btn-alt:hover,
+[data-theme="paper"] :is(button, a):is([class^="border-accent/"], [class*=" border-accent/"])[class*="bg-accent/"]:not(.rounded-xl, .rounded-2xl):hover { background: rgb(var(--c-panel-2)); }
+/* the current page in the sidebar: a red bar and ink text, as in the margin of a printed page */
+[data-theme="paper"] aside nav a.bg-panel-2 { background: transparent; color: var(--ink); font-weight: 600; box-shadow: inset 2px 0 0 rgb(var(--c-accent)); }
+[data-theme="paper"] .nav-badge-warn { color: rgb(var(--c-accent)) !important; }
+[data-theme="paper"] .nav-badge-warn > span { background: rgb(var(--c-accent)) !important; }
+/* red is for text and marks only: cards tinted with it (bg-accent/…) take the warm sunk paper instead of pink */
+[data-theme="paper"] :is(.rounded-xl, .rounded-2xl)[class*="bg-accent/"] { background: rgb(var(--c-panel-2)); border-color: rgb(var(--c-border)); }
+[data-theme="paper"] :is(.rounded-xl, .rounded-2xl)[class*="bg-accent/"]:hover { background: #ece8de; }
+[data-theme="paper"] :is(.rounded-xl, .rounded-2xl)[class*="from-accent/"] { background: rgb(var(--c-panel-2)); border-color: rgb(var(--c-border)); }

@@ -1,18 +1,19 @@
 "use client";
 
-// How Protégé looks: Classic (the original dark look) or Midnight (near-black, light-edged cards,
-// Cal Sans headings, pill-shaped controls). Kept in this browser; the layout applies it before the
+// How Protégé looks: Classic (the original dark look), Midnight (near-black, Cal Sans headings,
+// pill-shaped controls) or Paper (light: warm paper, serif headings, square edges, one deep red). Kept in this browser; the layout applies it before the
 // page draws (see THEME_SCRIPT in app/layout.tsx). Shown in Settings.
 
 import { useEffect, useState } from "react";
 import Choice from "./Choice";
 
-export type Theme = "classic" | "midnight";
+export type Theme = "classic" | "midnight" | "paper";
 const KEY = "protege.theme";
 
 export function currentTheme(): Theme {
   if (typeof document === "undefined") return "classic";
-  return document.documentElement.dataset.theme === "midnight" ? "midnight" : "classic";
+  const t = document.documentElement.dataset.theme;
+  return t === "midnight" || t === "paper" ? t : "classic";
 }
 
 export default function ThemeToggle() {
@@ -24,8 +25,8 @@ export default function ThemeToggle() {
     try {
       localStorage.setItem(KEY, t);
     } catch {}
-    if (t === "midnight") document.documentElement.dataset.theme = "midnight";
-    else delete document.documentElement.dataset.theme;
+    if (t === "classic") delete document.documentElement.dataset.theme;
+    else document.documentElement.dataset.theme = t;
     // Pieces drawn with colours worked out in code (the flowchart) redraw themselves.
     window.dispatchEvent(new CustomEvent("protege-theme", { detail: t }));
   };
@@ -37,6 +38,7 @@ export default function ThemeToggle() {
       options={[
         ["classic", "Classic"],
         ["midnight", "Midnight"],
+        ["paper", "Paper"],
       ]}
     />
   );

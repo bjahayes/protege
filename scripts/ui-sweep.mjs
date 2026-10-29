@@ -152,7 +152,7 @@ for (const size of SIZES) {
       }
     } catch {}
   });
-  // SWEEP_THEME=midnight checks every page in that look.
+  // SWEEP_THEME=midnight (or paper) checks every page in that look.
   if (process.env.SWEEP_THEME) await ctx.addInitScript((t) => { try { localStorage.setItem("protege.theme", t); } catch {} }, process.env.SWEEP_THEME);
   const page = await ctx.newPage();
   const errors = [];

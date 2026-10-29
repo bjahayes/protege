@@ -188,7 +188,7 @@ via the Claude Agent SDK.
   A live job's `getEvents` merges saved rows older than the 3,000 kept in memory.
 - **2026-10-29:** Sign-in (`startLogin`) runs `claude auth login` hidden, shows its link and a code box, and falls back
   to a window if no link appears in 20 s or it fails.
-- **2026-10-29:** Two looks, Classic and Midnight (the Look row in Settings; kept per browser in
+- **2026-10-29:** Three looks, Classic, Midnight and Paper (light; added 2026-10-30) (the Look row in Settings; kept per browser in
   `protege.theme`; `?theme=midnight|classic` sets it). Tailwind colours are `rgb(var(--c-NAME) / <alpha-value>)`
   set in `globals.css` (`:root` = Classic, `[data-theme="midnight"]` on `<html>`, applied by an inline script in
   `layout.tsx` before the page draws). Never hard-code a colour: use the Tailwind names or `var(--good)` etc.
@@ -201,3 +201,9 @@ via the Claude Agent SDK.
   latest version. Put any new Protégé-wide choice there as a `Row`, not in the sidebar. The alert watcher
   (`NotificationCenter`) stays mounted in `AppShell`; its switch (`AlertsSwitch`) tells it of changes with the
   `protege-alerts` event. The sidebar shows only a restart's progress (`RestartButton statusOnly`).
+- **2026-10-30:** Paper is `[data-theme="paper"]` (light: Newsreader headings and reading text, Source Sans 3, square
+  edges, deep red accent, ink-black `btn-main`). `--c-running` is "happening now" (live dot, the step under way,
+  parts being changed): the logo's lilac in Midnight, a deeper lilac in Paper; links and the current page stay accent.
+  Midnight's pill rule for tinted buttons must never reach cards: it once matched `bg-accent/5 hover:border-accent/50`
+  on parts-map cards and drew them as ovals. `data/tmp`-style checks: no element over 60 px tall may have a radius
+  of half its height.

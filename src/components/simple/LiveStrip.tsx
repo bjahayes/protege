@@ -53,11 +53,11 @@ export default function LiveStrip() {
                       {j.kind === "assess" ? "Drawing a map of the project" : j.kind === "plan" ? `Planning: ${ownWords(j.prompt)}` : ownWords(j.prompt)}
                     </div>
                   </div>
-                  <div className="text-[12px] text-accent">{j.status === "idle" ? "Waiting for you" : STAGES[s]}</div>
+                  <div className={`text-[12px] ${j.status === "idle" ? "text-accent" : "text-running"}`}>{j.status === "idle" ? "Waiting for you" : STAGES[s]}</div>
                 </div>
                 <div className="grid grid-cols-5 gap-1.5 mt-2">
                   {STAGES.map((_, i) => (
-                    <span key={i} className={`h-1.5 rounded-full ${i < s ? "bg-accent/55" : i === s ? "bg-accent live-dot" : "bg-panel-2"}`} />
+                    <span key={i} className={`h-1.5 rounded-full ${i < s ? "bg-running/45" : i === s ? "bg-running live-dot" : "bg-panel-2"}`} />
                   ))}
                 </div>
               </Link>

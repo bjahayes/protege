@@ -183,7 +183,7 @@ export default function PartsMap({
         >
           {wires.map((w, i) => (
             <g key={i}>
-              <path d={w.d} fill="none" className={w.hot ? "stroke-accent protege-wire-hot" : "stroke-muted"} strokeWidth={w.hot ? 2 : 1.4} opacity={w.hot ? 1 : 0.7} />
+              <path d={w.d} fill="none" className={w.hot ? "stroke-running protege-wire-hot" : "stroke-muted"} strokeWidth={w.hot ? 2 : 1.4} opacity={w.hot ? 1 : 0.7} />
               <polygon points={w.ah} className={w.hot ? "fill-accent" : "fill-muted"} />
               {w.label && (
                 <text x={w.lx} y={w.ly} textAnchor="middle" className={`protege-wire-label text-[11px] ${w.hot ? "fill-accent" : "fill-muted"}`}>
@@ -219,7 +219,7 @@ export default function PartsMap({
                       aria-pressed={sel === c.name}
                       className={`relative flex-1 basis-[150px] max-w-[230px] min-w-0 text-left rounded-xl border-[1.5px] px-3 py-2.5 flex flex-col gap-1 transition-colors hover:border-accent/50 ${
                         ch
-                          ? "border-accent bg-panel protege-glow"
+                          ? "border-running bg-panel protege-glow"
                           : c.ghost
                             ? "border-dashed border-warn bg-transparent"
                             : mark
@@ -404,7 +404,7 @@ function PartDetail({
     >
       <div className="flex items-center gap-2 flex-wrap">
         <span className="font-semibold">{part.name}</span>
-        <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${changing ? "text-accent border-accent/50 bg-accent/10" : part.ghost ? "text-warn border-warn/40 bg-warn/10" : TONE_PILL[st.tone]}`}>
+        <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${changing ? "text-running border-running/50 bg-running/10" : part.ghost ? "text-warn border-warn/40 bg-warn/10" : TONE_PILL[st.tone]}`}>
           {changing ? "Being changed now" : part.ghost ? "New part in the plan" : st.label}
         </span>
         <button onClick={onClose} aria-label="Close" className="ml-auto text-muted hover:text-text text-sm leading-none px-1">

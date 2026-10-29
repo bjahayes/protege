@@ -491,7 +491,7 @@ function MapKey({ moment, marked, hasGhosts }: { moment: Moment; marked: boolean
   if (moment === "plan") {
     if (marked) items.push({ cls: "bg-warn", text: "the plan will change it" });
     if (hasGhosts) items.push({ cls: "border border-dashed border-warn", text: "a new part the plan would add" });
-  } else if (moment === "working" && marked) items.push({ cls: "bg-accent", text: "being changed now" });
+  } else if (moment === "working" && marked) items.push({ cls: "bg-running", text: "being changed now" });
   else if (moment === "changed" && marked) items.push({ cls: "bg-accent", text: "numbered: changed in that step" });
   if (!items.length) return null;
   return (
