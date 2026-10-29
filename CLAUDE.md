@@ -203,7 +203,7 @@ via the Claude Agent SDK.
   `protege-alerts` event. The sidebar shows only a restart's progress (`RestartButton statusOnly`).
 - **2026-10-30:** Paper is `[data-theme="paper"]` (light: Newsreader headings and reading text, Source Sans 3, square
   edges, deep red accent, ink-black `btn-main`). `--c-running` is "happening now" (live dot, the step under way,
-  parts being changed): the logo's lilac in Midnight, a deeper lilac in Paper; links and the current page stay accent.
+  parts being changed): the logo's lilac in Midnight, a muted slate blue (74 98 136) in Paper (lilac was too bright there); links and the current page stay accent.
   No pill-shaped controls (2026-10-30): Midnight's pill rule once matched `bg-accent/5 hover:border-accent/50`
   on parts-map cards and drew them as ovals; controls and cards keep rounded rectangles in every look. `data/tmp`-style checks: no element over 60 px tall may have a radius
   of half its height.

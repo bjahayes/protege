@@ -173,11 +173,11 @@ body {
 /* ---------- Paper: the light look ----------
    Warm paper, white sheets, thin warm rules, square edges, Newsreader serif for headings and reading
    text, Source Sans 3 for controls, one deep red for links and the current item, ink-black main
-   buttons, and a deeper lilac for whatever is happening now. */
+   buttons, and a muted slate blue for whatever is happening now (lilac was too bright on paper). */
 [data-theme="paper"] {
   color-scheme: light;
   --c-bg: 251 250 246; --c-panel: 255 255 255; --c-panel-2: 243 240 232; --c-border: 222 216 204; --c-muted: 112 107 97;
-  --c-text: 34 32 28; --c-accent: 138 44 31; --c-good: 52 110 58; --c-warn: 150 100 14; --c-bad: 168 48 30; --c-running: 84 104 214;
+  --c-text: 34 32 28; --c-accent: 138 44 31; --c-good: 52 110 58; --c-warn: 150 100 14; --c-bad: 168 48 30; --c-running: 74 98 136;
   --text-2: #4d4a43; --strong: #22201c; --code-bg: #f3f0e8; --scroll: #d5cec0;
   --brand: #5468d6; --label: #8a2c1f; --ink: #22201c;
   --font-ui: var(--font-source-sans), "Source Sans 3", system-ui, sans-serif;
